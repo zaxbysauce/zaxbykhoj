@@ -1,0 +1,14 @@
+# Root level gitignore
+.benchmarks/
+.pytest_cache/
+__pycache__/
+*.pyc
+.swarm/*.log
+.swarm/config-backup-*.json
+.swarm/session/state.json
+*.tmp
+*.bak
+
+# Large reference repos (keep structure, exclude contents)
+ragapp-repo/*
+!ragapp-repo/.gitkeep

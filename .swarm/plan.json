@@ -1,0 +1,521 @@
+{
+  "schema_version": "1.0.0",
+  "title": "Khoj RAG Enhancement - Hybrid Search, CRAG, Query Transformation",
+  "swarm": "paid",
+  "current_phase": 1,
+  "phases": [
+    {
+      "id": 1,
+      "name": "CRAG Evaluation & Query Transformation - Quick Wins",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "1.1",
+          "phase": 1,
+          "status": "in_progress",
+          "size": "medium",
+          "description": "Create RetrievalEvaluator class in processor/retrieval_evaluator.py with evaluate(query, chunks) returning CONFIDENT/AMBIGUOUS/NO_MATCH using gpt-4o-mini",
+          "depends": [],
+          "acceptance": "Evaluation returns correct classification, <300ms latency",
+          "files_touched": []
+        },
+        {
+          "id": "1.2",
+          "phase": 1,
+          "status": "completed",
+          "size": "medium",
+          "description": "Implement fallback in retrieval_evaluator.py: CONFIDENT->return chunks, AMBIGUOUS->lower threshold and re-search, NO_MATCH->return empty with warning",
+          "depends": [
+            "1.1"
+          ],
+          "acceptance": "Fallback triggers correctly for each classification",
+          "files_touched": []
+        },
+        {
+          "id": "1.3",
+          "phase": 1,
+          "status": "completed",
+          "size": "medium",
+          "description": "Create QueryTransformer class in processor/query_transformer.py with transform(query) returning [original, step_back] using gpt-4o-mini",
+          "depends": [],
+          "acceptance": "Generates 1-2 query variants via step-back prompting",
+          "files_touched": []
+        },
+        {
+          "id": "1.4",
+          "phase": 1,
+          "status": "completed",
+          "size": "small",
+          "description": "Create rrf_fuse(results_lists, k=60, limit=10) function in utils/helpers.py returning sorted Entry list",
+          "depends": [],
+          "acceptance": "RRF correctly ranks and deduplicates by entry ID",
+          "files_touched": []
+        },
+        {
+          "id": "1.5",
+          "phase": 1,
+          "status": "completed",
+          "size": "small",
+          "description": "Add 'from khoj.processor.retrieval_evaluator import RetrievalEvaluator' at top of routers/api_chat.py",
+          "depends": [
+            "1.1"
+          ],
+          "acceptance": "RetrievalEvaluator imported in api_chat.py",
+          "files_touched": []
+        },
+        {
+          "id": "1.6",
+          "phase": 1,
+          "status": "completed",
+          "size": "small",
+          "description": "Add if settings.CRAG_ENABLED and max_similarity < 0.75: result = evaluator.evaluate() after vector search in api_chat.py",
+          "depends": [
+            "1.5"
+          ],
+          "acceptance": "CRAG gating logic added to chat flow",
+          "files_touched": []
+        },
+        {
+          "id": "1.7",
+          "phase": 1,
+          "status": "completed",
+          "size": "small",
+          "description": "Add query_variants = transformer.transform(query) before embedding generation in api_chat.py when settings.QUERY_TRANSFORM_ENABLED",
+          "depends": [
+            "1.3"
+          ],
+          "acceptance": "QueryTransformer wired into search flow",
+          "files_touched": []
+        },
+        {
+          "id": "1.8",
+          "phase": 1,
+          "status": "completed",
+          "size": "small",
+          "description": "Add fused_results = rrf_fuse([search_results_for_variant]) in api_chat.py when len(query_variants) > 1",
+          "depends": [
+            "1.4",
+            "1.7"
+          ],
+          "acceptance": "RRF fusion applied to variant results",
+          "files_touched": []
+        },
+        {
+          "id": "1.9",
+          "phase": 1,
+          "status": "completed",
+          "size": "medium",
+          "description": "Create tests/test_retrieval_evaluator.py and tests/test_query_transformer.py with mock LLM responses",
+          "depends": [
+            "1.6",
+            "1.8"
+          ],
+          "acceptance": "All Phase 1 components tested with >80% coverage",
+          "files_touched": []
+        },
+        {
+          "id": "1.10",
+          "phase": 1,
+          "status": "completed",
+          "size": "small",
+          "description": "Add test_confident_fallback(), test_ambiguous_fallback(), test_no_match_fallback() to test_retrieval_evaluator.py",
+          "depends": [
+            "1.9"
+          ],
+          "acceptance": "Each classification branch tested separately",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Hybrid Search - Dense + Sparse/BM25",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "2.1",
+          "phase": 2,
+          "status": "completed",
+          "size": "small",
+          "description": "Create Django migration 0XXX_add_search_vector: AddField('Entry', 'search_vector', TSVectorField()), AddIndex(GinIndex(fields=['search_vector']))",
+          "depends": [],
+          "acceptance": "Migration creates search_vector tsvector column with GIN index",
+          "files_touched": []
+        },
+        {
+          "id": "2.2",
+          "phase": 2,
+          "status": "completed",
+          "size": "medium",
+          "description": "Create SparseEmbeddingGenerator in processor/sparse_embeddings.py using FlagEmbedding BGEM3FlagModel for lexical weights",
+          "depends": [],
+          "acceptance": "Sparse vectors generated using BGE-M3",
+          "files_touched": []
+        },
+        {
+          "id": "2.3",
+          "phase": 2,
+          "status": "completed",
+          "size": "small",
+          "description": "Refactor existing vector search into dense_search(query_embedding, user, k=10) in search_type/text_search.py",
+          "depends": [],
+          "acceptance": "dense_search() wrapper returns list of (entry, distance) tuples",
+          "files_touched": []
+        },
+        {
+          "id": "2.4",
+          "phase": 2,
+          "status": "completed",
+          "size": "small",
+          "description": "Create sparse_search(query_text, user, k=10) using Entry.objects.annotate(rank=SearchRank('search_vector')) in text_search.py - DEPENDS on 2.1",
+          "depends": [
+            "2.1"
+          ],
+          "acceptance": "sparse_search() wrapper returns list of (entry, rank) tuples",
+          "files_touched": []
+        },
+        {
+          "id": "2.5",
+          "phase": 2,
+          "status": "completed",
+          "size": "medium",
+          "description": "Create hybrid_search(query_text, query_embedding, user, k=10, alpha=0.6) calling dense_search and sparse_search, then rrf_fuse - DEPENDS on 2.3, 2.4, 1.4",
+          "depends": [
+            "2.3",
+            "2.4",
+            "1.4"
+          ],
+          "acceptance": "hybrid_search() returns combined results with configurable alpha",
+          "files_touched": []
+        },
+        {
+          "id": "2.6",
+          "phase": 2,
+          "status": "completed",
+          "size": "small",
+          "description": "Add hybrid_alpha=FloatField(default=0.6) and hybrid_enabled=BooleanField(default=True) to database/models/SearchModelConfig",
+          "depends": [],
+          "acceptance": "Hybrid parameters exposed in SearchModelConfig model",
+          "files_touched": []
+        },
+        {
+          "id": "2.7",
+          "phase": 2,
+          "status": "completed",
+          "size": "medium",
+          "description": "Create management command: python manage.py populate_fts_index --batch-size=1000 - DEPENDS on 2.1",
+          "depends": [
+            "2.1"
+          ],
+          "acceptance": "Existing entries have tsvector populated",
+          "files_touched": []
+        },
+        {
+          "id": "2.8",
+          "phase": 2,
+          "status": "completed",
+          "size": "medium",
+          "description": "Create tests/test_hybrid_search.py with parameterized tests for alpha=0.3, 0.5, 0.7",
+          "depends": [
+            "2.5"
+          ],
+          "acceptance": "Hybrid search tested with various alpha values",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Contextual Chunking & Window Expansion",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "3.1",
+          "phase": 3,
+          "status": "completed",
+          "size": "small",
+          "description": "Create Django migration 0XXX_add_context_summary: AddField('Entry', 'context_summary', models.TextField(blank=True, null=True))",
+          "depends": [],
+          "acceptance": "Migration adds context_summary TextField to Entry",
+          "files_touched": []
+        },
+        {
+          "id": "3.2",
+          "phase": 3,
+          "status": "completed",
+          "size": "medium",
+          "description": "Create ContextualChunker class in processor/contextual_chunker.py using gpt-4o-mini, temperature=0, max_tokens=60 - DEPENDS on 3.1",
+          "depends": [
+            "3.1"
+          ],
+          "acceptance": "Generates 1-2 sentence context per chunk in <500ms",
+          "files_touched": []
+        },
+        {
+          "id": "3.3",
+          "phase": 3,
+          "status": "completed",
+          "size": "small",
+          "description": "Add chunker.summarize_chunk() call in processor/content/markdown/markdown_to_entries.py when flag enabled",
+          "depends": [
+            "3.2"
+          ],
+          "acceptance": "Markdown files get context summaries when CONTEXTUAL_CHUNKING_ENABLED=true",
+          "files_touched": []
+        },
+        {
+          "id": "3.4",
+          "phase": 3,
+          "status": "completed",
+          "size": "small",
+          "description": "Add chunker.summarize_chunk() call in processor/content/pdf/pdf_to_entries.py when flag enabled",
+          "depends": [
+            "3.2"
+          ],
+          "acceptance": "PDF files get context summaries when flag enabled",
+          "files_touched": []
+        },
+        {
+          "id": "3.5",
+          "phase": 3,
+          "status": "completed",
+          "size": "small",
+          "description": "Add chunker.summarize_chunk() call in processor/content/org_mode/org_to_entries.py when flag enabled",
+          "depends": [
+            "3.2"
+          ],
+          "acceptance": "Org-mode files get context summaries when flag enabled",
+          "files_touched": []
+        },
+        {
+          "id": "3.6",
+          "phase": 3,
+          "status": "completed",
+          "size": "medium",
+          "description": "Create expand_window(entry, window_size=2) in search_type/text_search.py fetching adjacent chunks",
+          "depends": [],
+          "acceptance": "Adjacent N chunks fetched correctly, grouped by file_id",
+          "files_touched": []
+        },
+        {
+          "id": "3.7",
+          "phase": 3,
+          "status": "completed",
+          "size": "small",
+          "description": "Update processor/conversation/prompts.py to prepend entry.context_summary to reference text when available",
+          "depends": [],
+          "acceptance": "LLM receives context summaries in prompt",
+          "files_touched": []
+        },
+        {
+          "id": "3.8",
+          "phase": 3,
+          "status": "completed",
+          "size": "small",
+          "description": "Create tests/test_contextual_chunker.py with mock LLM, rate limit (5 concurrent), error handling tests",
+          "depends": [
+            "3.3"
+          ],
+          "acceptance": "Contextual chunking tested with mock LLM and rate limiting",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Multi-Scale Chunking & Configuration",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "4.1",
+          "phase": 4,
+          "status": "pending",
+          "size": "small",
+          "description": "Create Django migration 0XXX_add_chunk_scale: AddField('Entry', 'chunk_scale', models.CharField(max_length=16, default='default'))",
+          "depends": [],
+          "acceptance": "Migration adds chunk_scale VARCHAR(16) with default 'default'",
+          "files_touched": []
+        },
+        {
+          "id": "4.2",
+          "phase": 4,
+          "status": "pending",
+          "size": "medium",
+          "description": "Modify processor/content/text_to_entries.py to create entries at multiple chunk_size values - DEPENDS on 4.1",
+          "depends": [
+            "4.1"
+          ],
+          "acceptance": "Documents chunked at 512, 1024, 2048 tokens with scale label",
+          "files_touched": []
+        },
+        {
+          "id": "4.3",
+          "phase": 4,
+          "status": "pending",
+          "size": "medium",
+          "description": "Create rrf_fuse_multi(sources: Dict[str, List[Result]], k=60, limit=10) in utils/helpers.py where sources keys are 'dense_512', 'sparse_1024', etc.",
+          "depends": [
+            "1.4",
+            "2.5",
+            "4.2"
+          ],
+          "acceptance": "rrf_fuse_multi() handles variants, scales, dense/sparse in single call",
+          "files_touched": []
+        },
+        {
+          "id": "4.4",
+          "phase": 4,
+          "status": "pending",
+          "size": "small",
+          "description": "Add config flags to utils/config.py with specified defaults",
+          "depends": [],
+          "acceptance": "All features toggleable via Django settings with defaults: CRAG_ENABLED=True, QUERY_TRANSFORM_ENABLED=True, HYBRID_SEARCH_ENABLED=True, CONTEXTUAL_CHUNKING_ENABLED=False, MULTI_SCALE_ENABLED=False, RRF_K=60",
+          "files_touched": []
+        },
+        {
+          "id": "4.5",
+          "phase": 4,
+          "status": "pending",
+          "size": "medium",
+          "description": "Create routers/api_metrics.py with /api/rag/metrics endpoint",
+          "depends": [],
+          "acceptance": "GET /api/rag/metrics returns JSON: {latency_p50_ms, latency_p95_ms, crag_classifications: {confident: N, ambiguous: N, no_match: N}, cache_hit_rate: 0.X}",
+          "files_touched": []
+        },
+        {
+          "id": "4.6",
+          "phase": 4,
+          "status": "pending",
+          "size": "medium",
+          "description": "Create management command: python manage.py reindex_multi_scale --scales=512,1024,2048 --dry-run - DEPENDS on 4.1, 4.2",
+          "depends": [
+            "4.1",
+            "4.2"
+          ],
+          "acceptance": "Existing entries re-indexed at multiple scales",
+          "files_touched": []
+        },
+        {
+          "id": "4.7",
+          "phase": 4,
+          "status": "pending",
+          "size": "medium",
+          "description": "Create tests/test_rag_pipeline_e2e.py testing query flow with CRAG + transformation + hybrid + multi-scale",
+          "depends": [
+            "4.3",
+            "4.4"
+          ],
+          "acceptance": "End-to-end pipeline tested with all features enabled",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Schema Migration Safety & Rollback",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "5.1",
+          "phase": 5,
+          "status": "pending",
+          "size": "medium",
+          "description": "Add ReverseMigration operations to each schema migration file (0XXX_add_search_vector, 0XXX_add_context_summary, 0XXX_add_chunk_scale)",
+          "depends": [],
+          "acceptance": "Reverse migrations remove columns and indexes cleanly",
+          "files_touched": []
+        },
+        {
+          "id": "5.2",
+          "phase": 5,
+          "status": "pending",
+          "size": "small",
+          "description": "Create docs/migration_rollback.md with steps: pg_dump, apply reverse migration, verify row count, verify query results",
+          "depends": [
+            "5.1"
+          ],
+          "acceptance": "Backup/restore steps documented and validated",
+          "files_touched": []
+        },
+        {
+          "id": "5.3",
+          "phase": 5,
+          "status": "pending",
+          "size": "medium",
+          "description": "Create tests/test_migration_compatibility.py verifying: Entry.objects.filter(user=user), search_with_embeddings(), FTS search, agent isolation",
+          "depends": [
+            "5.1"
+          ],
+          "acceptance": "Existing queries return same results post-migration",
+          "files_touched": []
+        },
+        {
+          "id": "5.4",
+          "phase": 5,
+          "status": "pending",
+          "size": "small",
+          "description": "Create tests/test_rollback.py that applies migration, inserts 100 test entries, runs reverse migration, verifies columns removed and row count preserved",
+          "depends": [
+            "5.1"
+          ],
+          "acceptance": "Rollback tested on test database with data integrity verified",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Optional Tri-Vector Support (Dense + Sparse + Colbert)",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "6.1",
+          "phase": 6,
+          "status": "pending",
+          "size": "small",
+          "description": "Evaluate tri-vector by running benchmarks against Phase 1-4 baseline - ONLY PROCEED if all criteria met",
+          "depends": [],
+          "acceptance": "Decision document compares baseline vs enhanced: MAP@10, latency_p95, cost_per_1k_queries with criteria: MAP@10 gain > 0.05 AND latency_p95 increase < 200ms AND cost increase < 50%",
+          "files_touched": []
+        },
+        {
+          "id": "6.2",
+          "phase": 6,
+          "status": "pending",
+          "size": "large",
+          "description": "If approved: Add TriVectorEmbeddingGenerator in processor/tri_vector_embeddings.py using FlagEmbedding BGEM3FlagModel",
+          "depends": [
+            "6.1"
+          ],
+          "acceptance": "BGEM3FlagModel produces dense (1024-dim), sparse (token weights), colbert (token embeddings)",
+          "files_touched": []
+        },
+        {
+          "id": "6.3",
+          "phase": 6,
+          "status": "pending",
+          "size": "medium",
+          "description": "If approved: Create migration AddField('Entry', 'colbert_vector', models.BinaryField(blank=True, null=True))",
+          "depends": [
+            "6.2"
+          ],
+          "acceptance": "colbert_vector BYTEA stores compressed token embeddings with nbits=2",
+          "files_touched": []
+        },
+        {
+          "id": "6.4",
+          "phase": 6,
+          "status": "pending",
+          "size": "large",
+          "description": "If approved: Create tri_vector_search() in text_search.py computing weighted sum of normalized scores",
+          "depends": [
+            "6.3"
+          ],
+          "acceptance": "Tri-vector search with weights w_dense=0.4, w_sparse=0.2, w_colbert=0.4",
+          "files_touched": []
+        }
+      ]
+    }
+  ],
+  "migration_status": "native"
+}
