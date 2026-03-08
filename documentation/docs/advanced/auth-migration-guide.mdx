@@ -1,0 +1,61 @@
+# Authentication Migration Guide
+
+## Overview
+
+As of version [VERSION], Khoj now runs with authentication **disabled by default** (anonymous mode). This change makes it easier to get started with personal use, but may affect existing deployments that relied on the previous default behavior.
+
+## What's Changed
+
+### Before
+- Authentication was **required** by default
+- You needed to set up Google OAuth or Magic Links to use Khoj
+- The `--anonymous-mode` flag was needed to disable authentication
+
+### After
+- Authentication is **disabled** by default (single-user mode)
+- You can start using Khoj immediately without any auth setup
+- The `--no-anonymous-mode` flag is used to enable authentication
+
+## Migration Steps
+
+### For Docker Deployments
+
+If you want to keep authentication required (old behavior):
+
+1. Add the `--no-anonymous-mode` flag to your docker-compose.yml:
+   ```yaml
+   services:
+     khoj:
+       image: ghcr.io/khoj-ai/khoj:latest
+       command: --no-anonymous-mode
+   ```
+
+2. Set up authentication (if not already configured):
+   - [Magic Links](/advanced/authentication#using-magic-links), or
+   - [Google OAuth](/advanced/authentication#using-google-oauth)
+
+### For Pip Installations
+
+If you want to keep authentication required (old behavior):
+
+1. Start Khoj with the `--no-anonymous-mode` flag:
+   ```bash
+   khoj --no-anonymous-mode
+   ```
+
+2. Set up authentication as described in the [Authentication Guide](/advanced/authentication).
+
+### For New Single-User Deployments
+
+No action needed! Khoj now works out-of-the-box for personal use without any authentication setup.
+
+## Security Considerations
+
+- **Anonymous mode** (default): Suitable for personal use, local networks, or when running behind a reverse proxy with its own authentication
+- **Authenticated mode** (--no-anonymous-mode): Required for multi-user deployments or when exposing Khoj to the internet
+
+## Questions?
+
+If you have questions about migrating your deployment, please:
+- Join our [Discord community](https://discord.gg/BDgyabRM6e)
+- Open an issue on [GitHub](https://github.com/khoj-ai/khoj/issues)

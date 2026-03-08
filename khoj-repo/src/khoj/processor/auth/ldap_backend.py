@@ -126,14 +126,47 @@ class LdapAuthBackend:
     def _sanitize_username(self, username: str) -> str:
         """Sanitize username for LDAP filter to prevent injection.
         
+        Uses ldap3's escape_filter_chars to escape special characters
+        that could be used for LDAP injection attacks.
+        
+        Per RFC 4515, the following characters are escaped:
+        - * (wildcard) → \\2a
+        - ( ) (parentheses) → \\28 \\29
+        - \\ (backslash) → \\5c
+        - NUL character → \\00
+        
         Args:
             username: Raw username input
             
         Returns:
             Sanitized username safe for LDAP filter
+            
+        Raises:
+            ValueError: If username is empty or None
         """
-        # Implementation in task 4.4
-        pass
+        from ldap3.utils.conv import escape_filter_chars
+        
+        # Reject empty/None input
+        if not username:
+            raise ValueError("Username cannot be empty or None")
+        
+        # Convert to string if needed and encode/decode for Unicode safety
+        username_str = str(username)
+        
+        # Truncate BEFORE escaping to avoid breaking escape sequences
+        max_length = 256
+        if len(username_str) > max_length:
+            logger.warning(f"Username exceeds max length ({max_length}), truncating")
+            username_str = username_str[:max_length]
+        
+        # Escape special LDAP filter characters
+        try:
+            sanitized = escape_filter_chars(username_str)
+        except Exception as e:
+            logger.exception("Failed to escape username")
+            raise ValueError(f"Invalid username format: {e}")
+        
+        return sanitized
     
     def authenticate(self, username: str, password: str) -> Optional[dict]:
         """Authenticate user against LDAP.
@@ -153,8 +186,208 @@ class LdapAuthBackend:
         Raises:
             LdapAuthError: If LDAP server is unreachable or misconfigured
         """
-        # Implementation in task 4.5
-        pass
+        import hashlib
+        from django.db import transaction
+        from khoj.database.models import KhojUser, LdapConfig
+        
+        # Sanitize username
+        try:
+            sanitized_username = self._sanitize_username(username)
+        except ValueError as e:
+            self._log_auth_attempt(username, "failed", "invalid_username")
+            return None
+        
+        # Get service account credentials
+        try:
+            bind_dn, bind_password = self._get_bind_credentials()
+        except Exception:
+            logger.exception("Failed to retrieve bind credentials")
+            raise LdapAuthError("LDAP configuration error")
+        
+        conn = None
+        user_conn = None
+        
+        try:
+            # Step 1: Bind with service account to search for user
+            conn = Connection(
+                self.server,
+                user=bind_dn,
+                password=bind_password,
+                auto_bind=AUTO_BIND_NONE,
+                read_only=True,
+            )
+            
+            if not conn.bind():
+                logger.error("Service account bind failed")
+                raise LdapAuthError("LDAP service account authentication failed")
+            
+            # Search for user
+            search_filter = self.config.user_search_filter.format(username=sanitized_username)
+            search_base = self.config.user_search_base
+            
+            conn.search(
+                search_base=search_base,
+                search_filter=search_filter,
+                search_scope='SUBTREE',
+                attributes=['cn', 'mail', 'givenName', 'sn', 'sAMAccountName', 'dn'],
+            )
+            
+            if not conn.entries:
+                self._log_auth_attempt(username, "failed", "user_not_found")
+                return None
+            
+            user_entry = conn.entries[0]
+            user_dn = user_entry.entry_dn
+            
+            # Step 2: Bind with user credentials to verify
+            user_conn = Connection(
+                self.server,
+                user=user_dn,
+                password=password,
+                auto_bind=AUTO_BIND_NONE,
+            )
+            
+            if not user_conn.bind():
+                self._log_auth_attempt(username, "failed", "invalid_credentials")
+                return None
+            
+            # Extract user attributes
+            user_attrs = {
+                'dn': user_dn,
+                'username': username,
+                'email': getattr(user_entry, 'mail', None),
+                'first_name': getattr(user_entry, 'givenName', None),
+                'last_name': getattr(user_entry, 'sn', None),
+                'full_name': getattr(user_entry, 'cn', None),
+            }
+            
+            # Step 3: Provision or update local user
+            with transaction.atomic():
+                khoj_user = self._get_or_create_user(user_attrs)
+                self._update_user_from_ldap(khoj_user, user_attrs)
+            
+            self._log_auth_attempt(username, "success", None)
+            
+            return user_attrs
+            
+        except LDAPException as e:
+            logger.exception("LDAP error during authentication")
+            self._log_auth_attempt(username, "failed", "ldap_error")
+            raise LdapAuthError("LDAP authentication failed")
+        except Exception:
+            logger.exception("Unexpected error during authentication")
+            self._log_auth_attempt(username, "failed", "system_error")
+            raise LdapAuthError("Authentication system error")
+        finally:
+            if conn:
+                conn.unbind()
+            if user_conn:
+                user_conn.unbind()
+    
+    def _get_or_create_user(self, ldap_attrs: dict) -> 'KhojUser':
+        """Get existing user or create new one based on LDAP DN.
+        
+        Args:
+            ldap_attrs: Dictionary with user attributes from LDAP
+            
+        Returns:
+            KhojUser: Existing or newly created user
+        """
+        from khoj.database.models import KhojUser
+        
+        user_dn = ldap_attrs['dn']
+        username = ldap_attrs['username']
+        
+        # Try to find by LDAP DN first
+        try:
+            user = KhojUser.objects.get(ldap_dn=user_dn)
+            return user
+        except KhojUser.DoesNotExist:
+            pass
+        
+        # Try to find by username
+        try:
+            user = KhojUser.objects.get(username=username)
+            # Link to LDAP DN
+            user.ldap_dn = user_dn
+            user.save(update_fields=['ldap_dn'])
+            return user
+        except KhojUser.DoesNotExist:
+            pass
+        
+        # Create new user
+        email = ldap_attrs.get('email') or f"{username}@localhost"
+        user = KhojUser.objects.create(
+            username=username,
+            email=email,
+            ldap_dn=user_dn,
+        )
+        
+        logger.info(f"Created new KhojUser from LDAP: {username}")
+        return user
+    
+    def _update_user_from_ldap(self, user: 'KhojUser', ldap_attrs: dict) -> None:
+        """Update local user attributes from LDAP.
+        
+        Args:
+            user: KhojUser instance to update
+            ldap_attrs: Dictionary with attributes from LDAP
+        """
+        updated = False
+        
+        # Only update if LDAP value is non-empty and different from current
+        first_name = ldap_attrs.get('first_name', '').strip()
+        if first_name and user.first_name != first_name:
+            user.first_name = first_name
+            updated = True
+        
+        last_name = ldap_attrs.get('last_name', '').strip()
+        if last_name and user.last_name != last_name:
+            user.last_name = last_name
+            updated = True
+        
+        email = ldap_attrs.get('email', '').strip()
+        if email and user.email != email:
+            user.email = email
+            updated = True
+        
+        if updated:
+            user.save(update_fields=['first_name', 'last_name', 'email'])
+            logger.debug(f"Updated KhojUser from LDAP: {user.username}")
+    
+    def _log_auth_attempt(self, username: str, outcome: str, failure_reason: Optional[str]) -> None:
+        """Log authentication attempt for audit purposes.
+        
+        Security:
+            - Username is hashed (not stored in plaintext)
+            - Passwords are NEVER logged
+            - Structured JSON format for SIEM ingestion
+        
+        Args:
+            username: The username attempted
+            outcome: 'success' or 'failed'
+            failure_reason: Reason for failure (None if success)
+        """
+        import hashlib
+        import json
+        from datetime import datetime
+        
+        # Hash the username for privacy
+        username_hash = hashlib.sha256(username.encode()).hexdigest()[:16]
+        
+        log_entry = {
+            'timestamp': datetime.utcnow().isoformat(),
+            'event_type': 'ldap_auth_attempt',
+            'username_hash': username_hash,
+            'outcome': outcome,
+            'source_ip': None,  # Will be set by caller if available
+        }
+        
+        if failure_reason:
+            log_entry['failure_reason'] = failure_reason
+        
+        # Log as JSON for SIEM ingestion
+        logger.info(f"AUDIT: {json.dumps(log_entry)}")
     
     def test_connection(self) -> Tuple[bool, str]:
         """Test LDAP connection without authenticating.
@@ -162,5 +395,30 @@ class LdapAuthBackend:
         Returns:
             tuple: (success: bool, message: str)
         """
-        # Implementation in task 5.x
-        pass
+        try:
+            bind_dn, bind_password = self._get_bind_credentials()
+            
+            conn = Connection(
+                self.server,
+                user=bind_dn,
+                password=bind_password,
+                auto_bind=AUTO_BIND_NONE,
+                read_only=True,
+            )
+            
+            if conn.bind():
+                # Try a simple search to verify permissions
+                conn.search(
+                    search_base=self.config.user_search_base,
+                    search_filter='(objectClass=*)',
+                    search_scope='BASE',
+                    size_limit=1,
+                )
+                conn.unbind()
+                return True, "LDAP connection successful"
+            else:
+                return False, "Failed to bind with service account"
+                
+        except Exception as e:
+            logger.exception("LDAP connection test failed")
+            return False, str(e)

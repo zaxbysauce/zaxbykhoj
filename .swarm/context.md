@@ -205,29 +205,145 @@ Standard Khoj contribution guidelines apply:
 
 | Tool | Calls | Success | Failed | Avg Duration |
 |------|-------|---------|--------|--------------|
-| read | 1644 | 1644 | 0 | 7ms |
-| bash | 1214 | 1214 | 0 | 1012ms |
-| edit | 510 | 510 | 0 | 2458ms |
-| task | 344 | 344 | 0 | 110040ms |
-| grep | 335 | 335 | 0 | 112ms |
-| glob | 226 | 226 | 0 | 25ms |
-| retrieve_summary | 127 | 127 | 0 | 3ms |
-| write | 103 | 103 | 0 | 3717ms |
-| todowrite | 68 | 68 | 0 | 4ms |
-| pre_check_batch | 68 | 68 | 0 | 2902ms |
-| lint | 60 | 60 | 0 | 2852ms |
-| test_runner | 45 | 45 | 0 | 17782ms |
-| update_task_status | 44 | 44 | 0 | 6ms |
-| diff | 21 | 21 | 0 | 12ms |
-| phase_complete | 19 | 19 | 0 | 5ms |
-| save_plan | 12 | 12 | 0 | 6ms |
-| imports | 11 | 11 | 0 | 4ms |
-| evidence_check | 4 | 4 | 0 | 2ms |
-| invalid | 4 | 4 | 0 | 1ms |
-| write_retro | 4 | 4 | 0 | 5ms |
-| todo_extract | 2 | 2 | 0 | 2ms |
-| apply_patch | 2 | 2 | 0 | 113ms |
+| read | 1417 | 1417 | 0 | 6ms |
+| bash | 1200 | 1200 | 0 | 764ms |
+| task | 418 | 418 | 0 | 98734ms |
+| edit | 373 | 373 | 0 | 1847ms |
+| grep | 317 | 317 | 0 | 148ms |
+| glob | 249 | 249 | 0 | 24ms |
+| retrieve_summary | 107 | 107 | 0 | 3ms |
+| write | 100 | 100 | 0 | 1811ms |
+| pre_check_batch | 95 | 95 | 0 | 1677ms |
+| update_task_status | 72 | 72 | 0 | 4ms |
+| test_runner | 51 | 51 | 0 | 16606ms |
+| lint | 42 | 42 | 0 | 2562ms |
+| todowrite | 41 | 41 | 0 | 4ms |
+| save_plan | 30 | 30 | 0 | 6ms |
+| imports | 27 | 27 | 0 | 4ms |
+| declare_scope | 21 | 21 | 0 | 1ms |
+| phase_complete | 20 | 20 | 0 | 5ms |
+| diff | 19 | 19 | 0 | 19ms |
+| invalid | 5 | 5 | 0 | 2ms |
+| write_retro | 4 | 4 | 0 | 3ms |
+| todo_extract | 3 | 3 | 0 | 2ms |
+| apply_patch | 3 | 3 | 0 | 97ms |
+| webfetch | 3 | 3 | 0 | 210ms |
+| evidence_check | 2 | 2 | 0 | 2ms |
 | secretscan | 2 | 2 | 0 | 135ms |
-| webfetch | 2 | 2 | 0 | 316ms |
-| mystatus | 1 | 1 | 0 | 2165ms |
-| checkpoint | 1 | 1 | 0 | 7ms |
+| checkpoint | 2 | 2 | 0 | 30ms |
+| symbols | 1 | 1 | 0 | 0ms |
+| mystatus | 1 | 1 | 0 | 2884ms |
+## NEW PROJECT: Khoj Authentication Enhancement
+
+**Started**: 2026-03-07  
+**Phase**: 1 [IN PROGRESS]  
+**Spec**: .swarm/spec.md ✅  
+**Plan**: .swarm/plan.md ✅  
+
+### Objectives
+1. **Auth Disabled by Default** - Khoj runs without authentication by default
+2. **LDAP Authentication Support** - Optional Windows Active Directory integration with UI configuration
+
+### Implementation Overview
+
+**Phase 1: Auth Disabled by Default**
+- Change anonymous_mode default from False to True in state.py
+- Update CLI flag defaults in cli.py
+- Update documentation
+- Add tests for default behavior
+
+**Phase 2: LDAP Backend Infrastructure**
+- Add ldap3 dependency
+- Create LdapConfig database model with encrypted password storage
+- Create LdapAuthBackend class
+- Integrate with existing UserAuthenticationBackend
+
+**Phase 3: LDAP API Endpoints**
+- GET/POST /api/settings/ldap for configuration
+- POST /api/settings/ldap/test for connection testing
+- POST /auth/ldap/login for authentication
+
+**Phase 4: LDAP Settings UI**
+- LDAP configuration form with test connection button
+- Admin-only access control
+- LDAP login form when enabled
+
+**Phase 5: Integration and Testing**
+- Mock-based LDAP tests
+- End-to-end integration tests
+- Complete documentation with AD examples
+
+### Key Technical Decisions
+
+1. **Anonymous Mode**: Default to True (auth opt-in rather than opt-out)
+2. **LDAP Library**: ldap3 for pure Python portability
+3. **Password Encryption**: Fernet encryption for LDAP bind passwords
+4. **Windows AD Support**: Use sAMAccountName for username field
+5. **79 Protected Endpoints**: Already respect anonymous_mode via UserAuthenticationBackend
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| src/khoj/utils/state.py | anonymous_mode: bool = True |
+| src/khoj/utils/cli.py | --anonymous-mode default True |
+| src/khoj/database/models/__init__.py | Add LdapConfig model, ldap_dn to KhojUser |
+| src/khoj/configure.py | Add LDAP auth to UserAuthenticationBackend |
+| src/khoj/routers/ldap.py | New LDAP API endpoints |
+| src/khoj/database/admin.py | Add LdapConfigAdmin |
+| pyproject.toml | Add ldap3>=2.9.1 |
+| src/interface/web/app/settings/page.tsx | Add LDAP config section |
+
+### Dependencies
+- ldap3>=2.9.1 - Pure Python LDAP client
+
+---
+
+## SME Cache - Authentication/LDAP Project
+
+### Security SME Feedback (Consulted 2026-03-07)
+
+**CRITICAL: LDAP Password Storage**
+- Fernet encryption is NOT suitable for production
+- Environment variables are vulnerable to leaks
+- **Recommendation**: Use secret manager (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault)
+- **Alternative**: Store LDAP config in environment variables only, not in database
+
+**LDAP Injection Prevention**
+- MUST use `ldap3.utils.conv.escape_filter_chars` for user input
+- Never interpolate raw user input into LDAP filters
+
+**Authentication Flow (Two-Bind)**
+1. Bind with read-only service account to search for user
+2. Bind with user credentials to verify
+- Never use service account to impersonate users
+
+**TLS Requirements**
+- Enforce certificate validation by default
+- Support custom CA bundle for on-prem AD with private CAs
+- Use StartTLS (port 389) or LDAPS (port 636)
+- Never allow TLS downgrade in production
+
+**Audit Logging**
+- Log: timestamp, source IP, username (hashed), outcome, LDAP response code
+- NEVER log passwords or credentials
+- Use structured JSON for SIEM ingestion
+
+**Rate Limiting**
+- Implement per-IP and per-user rate limiting
+- Prevent AD account lockout from brute force
+
+### Designer Feedback (Consulted 2026-03-07)
+
+**UI Component Created**: `ldapConfig.tsx` scaffold
+- 8 form fields with validation
+- React-hook-form + Zod schema
+- SWR for server state
+- Tailwind CSS styling
+- WCAG 2.1 AA accessible
+
+**Key Patterns**:
+- Use existing Khoj settings page patterns
+- Admin-only section with badge
+- Test Connection button with loading states
+- Toast notifications for success/error

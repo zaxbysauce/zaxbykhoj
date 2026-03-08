@@ -1,0 +1,60 @@
+# Authentication Rollback Procedure
+
+If you need to revert to the previous behavior (authentication required by default), follow these steps.
+
+## Quick Rollback
+
+### Option 1: Use --no-anonymous-mode Flag (Recommended)
+
+Simply add `--no-anonymous-mode` to your Khoj startup command:
+
+```bash
+# Docker
+docker run -v /path/to/config:/root/.khoj ghcr.io/khoj-ai/khoj:latest --no-anonymous-mode
+
+# Docker Compose
+# Add to your docker-compose.yml:
+command: --no-anonymous-mode
+
+# Pip
+khoj --no-anonymous-mode
+```
+
+### Option 2: Environment Variable
+
+Set the following environment variable before starting Khoj:
+
+```bash
+export KHOJ_FORCE_AUTH=true  # Then start Khoj normally
+```
+
+Note: You will still need to configure authentication (Magic Links or Google OAuth) for users to log in.
+
+## Verifying Rollback
+
+To verify that authentication is now required:
+
+1. Start Khoj with `--no-anonymous-mode`
+2. Open http://localhost:42110 in an incognito/private browser window
+3. You should be redirected to a login page instead of seeing the app immediately
+
+## Troubleshooting
+
+### "Authentication required but no auth method configured"
+
+If you see this error, you need to set up at least one authentication method:
+
+1. [Set up Magic Links](/advanced/authentication#using-magic-links), or
+2. [Set up Google OAuth](/advanced/authentication#using-google-oauth)
+
+### Users can't log in after rollback
+
+Ensure you've properly configured an authentication provider. Anonymous mode bypasses all authentication, so switching it off requires a proper auth setup.
+
+## Permanent Reversion
+
+If you want to permanently revert the default behavior in your deployment:
+
+1. Always use `--no-anonymous-mode` in your startup scripts
+2. Document this requirement for your team
+3. Consider setting up a systemd service or docker-compose file that includes the flag

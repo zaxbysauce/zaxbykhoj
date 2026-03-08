@@ -49,6 +49,7 @@ from khoj.database.adapters import (
     get_or_create_search_models,
 )
 from khoj.database.models import ClientApplication, KhojUser, ProcessLock, Subscription
+from khoj.processor.auth import LdapAuthError
 from khoj.processor.embeddings import CrossEncoderModel, EmbeddingsModel
 from khoj.routers.api_content import configure_content
 from khoj.routers.twilio import is_twilio_enabled
@@ -228,6 +229,57 @@ class UserAuthenticationBackend(AuthenticationBackend):
                 return AuthCredentials(["authenticated", "premium"]), AuthenticatedKhojUser(user)
 
         return AuthCredentials(), UnauthenticatedUser()
+
+    async def authenticate_ldap(self, username: str, password: str) -> Optional[KhojUser]:
+        """Authenticate user via LDAP.
+
+        Attempts LDAP authentication and returns the KhojUser if successful.
+        Creates or updates the local user record based on LDAP attributes.
+
+        Args:
+            username: LDAP username (sAMAccountName for AD)
+            password: User's LDAP password
+
+        Returns:
+            KhojUser: Authenticated user with populated attributes
+            None: If authentication fails or LDAP is not configured
+
+        Raises:
+            LdapAuthError: If LDAP server is unreachable or misconfigured
+        """
+        from khoj.database.models import LdapConfig
+        from khoj.processor.auth import LdapAuthBackend, LdapAuthError
+
+        # Check if LDAP is configured and enabled
+        try:
+            ldap_config = await LdapConfig.objects.filter(enabled=True).afirst()
+            if not ldap_config:
+                return None
+        except Exception:
+            logger.exception("Failed to query LDAP configuration")
+            return None
+
+        # Perform LDAP authentication
+        try:
+            backend = LdapAuthBackend(ldap_config)
+            user_attrs = backend.authenticate(username, password)
+
+            if not user_attrs:
+                return None
+
+            # Get the local user (created/updated during authentication)
+            user = await self.khojuser_manager.filter(
+                ldap_dn=user_attrs['dn']
+            ).prefetch_related("subscription").afirst()
+
+            return user
+
+        except LdapAuthError:
+            logger.exception("LDAP authentication error")
+            raise
+        except Exception:
+            logger.exception("Unexpected error during LDAP authentication")
+            return None
 
 
 def clean_connections(func):

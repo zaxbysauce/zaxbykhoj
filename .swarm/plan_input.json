@@ -1,0 +1,318 @@
+{
+  "swarm_id": "khoj-auth-enhancement-2026",
+  "title": "Khoj Authentication Enhancement",
+  "phases": [
+    {
+      "id": 1,
+      "name": "Auth Disabled by Default",
+      "tasks": [
+        {
+          "id": "1.1",
+          "description": "Change anonymous_mode default from False to True in src/khoj/utils/state.py",
+          "acceptance": "anonymous_mode defaults to True in state.py",
+          "size": "small"
+        },
+        {
+          "id": "1.2",
+          "description": "Change --anonymous-mode default from False to True in src/khoj/utils/cli.py and add --no-anonymous-mode flag",
+          "acceptance": "CLI --anonymous-mode defaults to True and --no-anonymous-mode flag exists",
+          "size": "small"
+        },
+        {
+          "id": "1.3",
+          "description": "Update documentation/docs/advanced/authentication.mdx",
+          "acceptance": "Documentation reflects anonymous mode as default",
+          "size": "medium"
+        },
+        {
+          "id": "1.4",
+          "description": "Create tests/test_anonymous_mode_default.py",
+          "acceptance": "Test validates anonymous mode default behavior",
+          "size": "medium"
+        },
+        {
+          "id": "1.5",
+          "description": "Document migration steps for existing deployments",
+          "acceptance": "Migration guide exists for existing deployments",
+          "size": "medium"
+        },
+        {
+          "id": "1.6",
+          "description": "Document rollback procedure",
+          "acceptance": "Rollback procedure documented",
+          "size": "small"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "LDAP Dependencies and Secret Management",
+      "tasks": [
+        {
+          "id": "2.1",
+          "description": "Add ldap3>=2.9.1 to pyproject.toml",
+          "acceptance": "ldap3 dependency added to pyproject.toml",
+          "size": "small"
+        },
+        {
+          "id": "2.2",
+          "description": "Create src/khoj/utils/secrets.py",
+          "acceptance": "secrets.py module created with secret retrieval interface",
+          "size": "medium"
+        },
+        {
+          "id": "2.3",
+          "description": "Add HashiCorp Vault adapter in src/khoj/utils/secrets_vault.py",
+          "acceptance": "HashiCorp Vault adapter implemented",
+          "size": "medium"
+        },
+        {
+          "id": "2.4",
+          "description": "Verify NO password fields in LdapConfig database model",
+          "acceptance": "LdapConfig model has no password fields - only references to external secret storage",
+          "size": "small"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "LDAP Database Models",
+      "tasks": [
+        {
+          "id": "3.1",
+          "description": "Create Django migration 0103_add_ldap_dn_to_user",
+          "acceptance": "Migration 0103 created and applies successfully",
+          "size": "small"
+        },
+        {
+          "id": "3.2",
+          "description": "Create Django migration 0104_ldap_config",
+          "acceptance": "Migration 0104 created and applies successfully",
+          "size": "small"
+        },
+        {
+          "id": "3.3",
+          "description": "Implement LdapConfig model",
+          "acceptance": "LdapConfig model implemented with all required fields",
+          "size": "medium"
+        },
+        {
+          "id": "3.4",
+          "description": "Add ldap_dn field to KhojUser",
+          "acceptance": "ldap_dn field added to KhojUser model",
+          "size": "small"
+        },
+        {
+          "id": "3.5",
+          "description": "Register LdapConfig in Django admin",
+          "acceptance": "LdapConfig visible in Django admin interface",
+          "size": "small"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "LDAP Authentication Backend - Part 1",
+      "tasks": [
+        {
+          "id": "4.1",
+          "description": "Create src/khoj/processor/auth/__init__.py",
+          "acceptance": "Auth processor package initialized",
+          "size": "small"
+        },
+        {
+          "id": "4.2",
+          "description": "Create LdapAuthBackend class structure",
+          "acceptance": "LdapAuthBackend class structure defined",
+          "size": "medium"
+        },
+        {
+          "id": "4.3",
+          "description": "Implement LDAP TLS configuration",
+          "acceptance": "LDAP TLS configuration implemented and tested",
+          "size": "medium"
+        },
+        {
+          "id": "4.4",
+          "description": "Implement LDAP injection prevention",
+          "acceptance": "Input sanitization prevents LDAP injection attacks",
+          "size": "medium"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "LDAP Authentication Backend - Part 2",
+      "tasks": [
+        {
+          "id": "5.1",
+          "description": "Implement two-bind authentication flow",
+          "acceptance": "Two-bind LDAP authentication works correctly",
+          "size": "large"
+        },
+        {
+          "id": "5.2",
+          "description": "Implement user provisioning",
+          "acceptance": "Users are auto-provisioned on first LDAP login",
+          "size": "medium"
+        },
+        {
+          "id": "5.3",
+          "description": "Implement user sync",
+          "acceptance": "User attributes sync from LDAP on login",
+          "size": "medium"
+        },
+        {
+          "id": "5.4",
+          "description": "Add audit logging",
+          "acceptance": "All LDAP auth events are logged for audit",
+          "size": "medium"
+        },
+        {
+          "id": "5.5",
+          "description": "Integrate into UserAuthenticationBackend",
+          "acceptance": "LDAP backend integrated with main auth backend",
+          "size": "medium"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "LDAP API Endpoints",
+      "tasks": [
+        {
+          "id": "6.1",
+          "description": "Create src/khoj/routers/ldap.py",
+          "acceptance": "LDAP router module created",
+          "size": "small"
+        },
+        {
+          "id": "6.2",
+          "description": "GET /api/settings/ldap endpoint",
+          "acceptance": "GET endpoint returns LDAP configuration",
+          "size": "medium"
+        },
+        {
+          "id": "6.3",
+          "description": "POST /api/settings/ldap endpoint",
+          "acceptance": "POST endpoint updates LDAP configuration",
+          "size": "medium"
+        },
+        {
+          "id": "6.4",
+          "description": "POST /api/settings/ldap/test endpoint",
+          "acceptance": "Test endpoint validates LDAP connection",
+          "size": "medium"
+        },
+        {
+          "id": "6.5",
+          "description": "Rate limiting for authentication",
+          "acceptance": "Rate limiting applied to auth endpoints",
+          "size": "medium"
+        },
+        {
+          "id": "6.6",
+          "description": "POST /auth/ldap/login endpoint",
+          "acceptance": "LDAP login endpoint implemented",
+          "size": "medium"
+        },
+        {
+          "id": "6.7",
+          "description": "Include ldap_router in configure.py",
+          "acceptance": "LDAP router included in app configuration",
+          "size": "small"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "LDAP Settings UI",
+      "tasks": [
+        {
+          "id": "7.1",
+          "description": "Create LdapConfigSection component",
+          "acceptance": "LdapConfigSection React component created",
+          "size": "large"
+        },
+        {
+          "id": "7.2",
+          "description": "Validate UI accessibility",
+          "acceptance": "UI passes accessibility checks",
+          "size": "medium"
+        },
+        {
+          "id": "7.3",
+          "description": "Add LDAP section to settings page",
+          "acceptance": "LDAP configuration section visible in settings",
+          "size": "medium"
+        },
+        {
+          "id": "7.4",
+          "description": "Create LDAP login form",
+          "acceptance": "LDAP login form component created",
+          "size": "medium"
+        },
+        {
+          "id": "7.5",
+          "description": "Integrate LDAP login into login page",
+          "acceptance": "LDAP login option available on login page",
+          "size": "medium"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Testing, Security Review, and Documentation",
+      "tasks": [
+        {
+          "id": "8.1",
+          "description": "Create tests/test_ldap_auth.py",
+          "acceptance": "LDAP authentication tests pass",
+          "size": "large"
+        },
+        {
+          "id": "8.2",
+          "description": "Create tests/test_ldap_config.py",
+          "acceptance": "LDAP configuration tests pass",
+          "size": "medium"
+        },
+        {
+          "id": "8.3",
+          "description": "Create tests/test_anonymous_mode.py",
+          "acceptance": "Anonymous mode tests pass",
+          "size": "medium"
+        },
+        {
+          "id": "8.4",
+          "description": "Security review",
+          "acceptance": "Security review completed with no critical findings",
+          "size": "large"
+        },
+        {
+          "id": "8.5",
+          "description": "Add LDAP documentation",
+          "acceptance": "LDAP setup and usage documented",
+          "size": "medium"
+        },
+        {
+          "id": "8.6",
+          "description": "Create integration test",
+          "acceptance": "End-to-end integration test passes",
+          "size": "large"
+        },
+        {
+          "id": "8.7",
+          "description": "Verify no email features in anonymous mode",
+          "acceptance": "Email-dependent features disabled in anonymous mode",
+          "size": "medium"
+        },
+        {
+          "id": "8.8",
+          "description": "Performance test LDAP authentication",
+          "acceptance": "LDAP auth performance meets requirements",
+          "size": "medium"
+        }
+      ]
+    }
+  ]
+}
