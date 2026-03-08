@@ -845,7 +845,7 @@ class Entry(DbBaseModel):
 
     user = models.ForeignKey(KhojUser, on_delete=models.CASCADE, default=None, null=True, blank=True)
     agent = models.ForeignKey(Agent, on_delete=models.CASCADE, default=None, null=True, blank=True)
-    embeddings = VectorField(dimensions=None)
+    embeddings = VectorField(dimensions=None, null=True, blank=True)
     raw = models.TextField()
     compiled = models.TextField()
     heading = models.CharField(max_length=1000, default=None, null=True, blank=True)
