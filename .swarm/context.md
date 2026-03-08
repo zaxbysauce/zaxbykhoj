@@ -206,13 +206,13 @@ Standard Khoj contribution guidelines apply:
 | Tool | Calls | Success | Failed | Avg Duration |
 |------|-------|---------|--------|--------------|
 | read | 1470 | 1470 | 0 | 6ms |
-| bash | 1273 | 1273 | 0 | 739ms |
-| task | 433 | 433 | 0 | 100068ms |
+| bash | 1285 | 1285 | 0 | 734ms |
+| task | 437 | 437 | 0 | 104391ms |
 | edit | 385 | 385 | 0 | 1811ms |
 | grep | 331 | 331 | 0 | 143ms |
 | glob | 254 | 254 | 0 | 24ms |
 | retrieve_summary | 114 | 114 | 0 | 3ms |
-| write | 106 | 106 | 0 | 1768ms |
+| write | 110 | 110 | 0 | 1765ms |
 | pre_check_batch | 97 | 97 | 0 | 1666ms |
 | update_task_status | 74 | 74 | 0 | 4ms |
 | test_runner | 53 | 53 | 0 | 17297ms |
