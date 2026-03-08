@@ -205,26 +205,26 @@ Standard Khoj contribution guidelines apply:
 
 | Tool | Calls | Success | Failed | Avg Duration |
 |------|-------|---------|--------|--------------|
-| read | 1427 | 1427 | 0 | 6ms |
-| bash | 1232 | 1232 | 0 | 758ms |
-| task | 423 | 423 | 0 | 100736ms |
-| edit | 374 | 374 | 0 | 1848ms |
-| grep | 320 | 320 | 0 | 147ms |
-| glob | 249 | 249 | 0 | 24ms |
-| retrieve_summary | 110 | 110 | 0 | 3ms |
-| write | 101 | 101 | 0 | 1823ms |
-| pre_check_batch | 96 | 96 | 0 | 1671ms |
-| update_task_status | 72 | 72 | 0 | 4ms |
-| test_runner | 52 | 52 | 0 | 16968ms |
+| read | 1470 | 1470 | 0 | 6ms |
+| bash | 1273 | 1273 | 0 | 739ms |
+| task | 433 | 433 | 0 | 100068ms |
+| edit | 385 | 385 | 0 | 1811ms |
+| grep | 331 | 331 | 0 | 143ms |
+| glob | 254 | 254 | 0 | 24ms |
+| retrieve_summary | 114 | 114 | 0 | 3ms |
+| write | 106 | 106 | 0 | 1768ms |
+| pre_check_batch | 97 | 97 | 0 | 1666ms |
+| update_task_status | 74 | 74 | 0 | 4ms |
+| test_runner | 53 | 53 | 0 | 17297ms |
+| todowrite | 44 | 44 | 0 | 4ms |
 | lint | 43 | 43 | 0 | 2538ms |
-| todowrite | 42 | 42 | 0 | 4ms |
 | save_plan | 30 | 30 | 0 | 6ms |
 | imports | 27 | 27 | 0 | 4ms |
+| phase_complete | 23 | 23 | 0 | 5ms |
 | declare_scope | 21 | 21 | 0 | 1ms |
 | diff | 20 | 20 | 0 | 18ms |
-| phase_complete | 20 | 20 | 0 | 5ms |
 | invalid | 5 | 5 | 0 | 2ms |
-| write_retro | 4 | 4 | 0 | 3ms |
+| write_retro | 5 | 5 | 0 | 3ms |
 | todo_extract | 3 | 3 | 0 | 2ms |
 | apply_patch | 3 | 3 | 0 | 97ms |
 | webfetch | 3 | 3 | 0 | 210ms |

@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 import { useUserConfig, ModelOptions, UserConfig, SubscriptionStates, isUserSubscribed } from "../common/auth";
 import { toTitleCase, useIsMobileWidth } from "../common/utils";
+import { LdapConfig } from "../components/ldapConfig";
 
 import { isValidPhoneNumber } from "libphonenumber-js";
 
@@ -1128,6 +1129,18 @@ export default function SettingsView() {
                                                     </Button>
                                                 </CardFooter>
                                             </Card>
+                                            {/* LDAP Configuration Card */}
+                                            {userConfig.is_admin && (
+                                                <Card id="ldap" className={cardClassName}>
+                                                    <CardHeader className="text-xl flex flex-row">
+                                                        <ArrowsClockwise className="h-7 w-7 mr-2" />
+                                                        <span>LDAP Authentication</span>
+                                                    </CardHeader>
+                                                    <CardContent className="grid gap-4">
+                                                        <LdapConfig isAdmin={userConfig.is_admin} />
+                                                    </CardContent>
+                                                </Card>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="section grid gap-8">

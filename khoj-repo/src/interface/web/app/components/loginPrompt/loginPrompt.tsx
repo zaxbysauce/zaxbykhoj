@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { GoogleSignIn } from "./GoogleSignIn";
+import LdapLoginForm from "./ldapLoginForm";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import {
     Carousel,
@@ -51,6 +52,7 @@ export default function LoginPrompt(props: LoginPromptProps) {
     const { data, error, isLoading } = useSWR<CredentialsData>("/auth/oauth/metadata", fetcher);
 
     const [useEmailSignIn, setUseEmailSignIn] = useState(false);
+    const [useLdapSignIn, setUseLdapSignIn] = useState(false);
 
     useEffect(() => {
         const google = (window as any).google;
@@ -118,24 +120,47 @@ export default function LoginPrompt(props: LoginPromptProps) {
         return (
             <Drawer open={true} onOpenChange={props.onOpenChange}>
                 <DrawerContent className={`flex flex-col gap-4 w-full mb-4`}>
-                    <div>
-                        {useEmailSignIn ? (
-                            <EmailSignInContext setUseEmailSignIn={setUseEmailSignIn} />
-                        ) : (
-                            <MainSignInContext
-                                handleGoogleScriptLoad={handleGoogleScriptLoad}
-                                handleGoogleSignIn={handleGoogleSignIn}
-                                isLoading={isLoading}
-                                data={data}
-                                setUseEmailSignIn={setUseEmailSignIn}
-                                isMobileWidth={props.isMobileWidth}
+                <div>
+                    {useEmailSignIn ? (
+                        <EmailSignInContext setUseEmailSignIn={setUseEmailSignIn} />
+                    ) : useLdapSignIn ? (
+                        <div className="w-full max-w-md">
+                            <Button
+                                variant="ghost"
+                                className="mb-4"
+                                onClick={() => setUseLdapSignIn(false)}
+                            >
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Back
+                            </Button>
+                            <div className="text-center font-bold text-xl mb-6">
+                                Sign in with LDAP
+                            </div>
+                            <LdapLoginForm
+                                onSuccess={() => {
+                                    window.location.reload();
+                                }}
+                                onError={(error) => {
+                                    console.error("LDAP login error:", error);
+                                }}
                             />
-                        )}
-                    </div>
-                </DrawerContent>
-            </Drawer>
-        );
-    }
+                        </div>
+                    ) : (
+                        <MainSignInContext
+                            handleGoogleScriptLoad={handleGoogleScriptLoad}
+                            handleGoogleSignIn={handleGoogleSignIn}
+                            isLoading={isLoading}
+                            data={data}
+                            setUseEmailSignIn={setUseEmailSignIn}
+                            setUseLdapSignIn={setUseLdapSignIn}
+                            isMobileWidth={props.isMobileWidth}
+                        />
+                    )}
+                </div>
+            </DrawerContent>
+        </Drawer>
+    );
+}
 
     return (
         <Dialog open={true} onOpenChange={props.onOpenChange}>
@@ -148,6 +173,28 @@ export default function LoginPrompt(props: LoginPromptProps) {
                 <div>
                     {useEmailSignIn ? (
                         <EmailSignInContext setUseEmailSignIn={setUseEmailSignIn} />
+                    ) : useLdapSignIn ? (
+                        <div className="w-full max-w-md">
+                            <Button
+                                variant="ghost"
+                                className="mb-4"
+                                onClick={() => setUseLdapSignIn(false)}
+                            >
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Back
+                            </Button>
+                            <div className="text-center font-bold text-xl mb-6">
+                                Sign in with LDAP
+                            </div>
+                            <LdapLoginForm
+                                onSuccess={() => {
+                                    window.location.reload();
+                                }}
+                                onError={(error) => {
+                                    console.error("LDAP login error:", error);
+                                }}
+                            />
+                        </div>
                     ) : (
                         <MainSignInContext
                             handleGoogleScriptLoad={handleGoogleScriptLoad}
@@ -155,6 +202,7 @@ export default function LoginPrompt(props: LoginPromptProps) {
                             isLoading={isLoading}
                             data={data}
                             setUseEmailSignIn={setUseEmailSignIn}
+                            setUseLdapSignIn={setUseLdapSignIn}
                             isMobileWidth={props.isMobileWidth ?? false}
                         />
                     )}
@@ -365,6 +413,7 @@ function MainSignInContext({
     isLoading,
     data,
     setUseEmailSignIn,
+    setUseLdapSignIn,
     isMobileWidth,
 }: {
     handleGoogleScriptLoad: () => void;
@@ -372,6 +421,7 @@ function MainSignInContext({
     isLoading: boolean;
     data: CredentialsData | undefined;
     setUseEmailSignIn: (useEmailSignIn: boolean) => void;
+    setUseLdapSignIn: (useLdapSignIn: boolean) => void;
     isMobileWidth: boolean;
 }) {
     const plugin = useRef(Autoplay({ delay: 4000, stopOnInteraction: true }));
@@ -506,6 +556,17 @@ function MainSignInContext({
                 >
                     <PaperPlaneTilt className="h-6 w-6" />
                     Continue with Email
+                </Button>
+
+                <Button
+                    variant="outline"
+                    className="w-[300px] p-8 flex gap-2 items-center justify-center rounded-lg font-bold"
+                    onClick={() => {
+                        setUseLdapSignIn(true);
+                    }}
+                >
+                    <ArrowsClockwise className="h-6 w-6" />
+                    Continue with LDAP
                 </Button>
             </div>
             <div className="text-center text-muted-foreground text-sm mb-[20px]">
