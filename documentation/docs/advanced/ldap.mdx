@@ -1,0 +1,138 @@
+# LDAP Authentication
+
+## Overview
+
+Khoj supports LDAP authentication for enterprise deployments, allowing users to log in using their existing LDAP credentials (Active Directory, OpenLDAP, etc.).
+
+## Features
+
+- **Windows Active Directory Support**: Primary target with sAMAccountName support
+- **TLS/SSL Encryption**: Enforced by default with certificate validation
+- **Two-Bind Authentication**: Secure authentication flow with service account
+- **User Auto-Provisioning**: Automatic user creation on first login
+- **Audit Logging**: All authentication attempts logged with hashed usernames
+- **Rate Limiting**: Protection against brute force attacks
+
+## Configuration
+
+### Environment Variables
+
+Set these environment variables for LDAP credentials:
+
+```bash
+# Option 1: Environment Variables (Simple)
+export KHOJ_LDAP_BIND_DN="CN=khoj-service,OU=Service Accounts,DC=company,DC=com"
+export KHOJ_LDAP_BIND_PASSWORD="your-service-account-password"
+
+# Option 2: HashiCorp Vault (Production)
+export KHOJ_VAULT_ADDR="https://vault.company.com:8200"
+export KHOJ_VAULT_TOKEN="your-vault-token"
+export KHOJ_VAULT_PATH="secret/data/khoj/ldap"
+```
+
+### Web UI Configuration
+
+1. Navigate to **Settings** → **LDAP Authentication** (Admin only)
+2. Configure the following fields:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| Server URL | LDAP server URL | `ldaps://ad.company.com:636` |
+| User Search Base | Base DN for user searches | `OU=Users,DC=company,DC=com` |
+| User Search Filter | Filter template for finding users | `(sAMAccountName={username})` |
+| Use TLS | Enable TLS/SSL | Checked |
+| Verify TLS | Validate certificates | Checked |
+| CA Bundle Path | Custom CA certificate (optional) | `/path/to/ca.crt` |
+
+3. Click **Test Connection** to verify connectivity
+4. Enable LDAP authentication
+
+## Active Directory Configuration
+
+For Windows Active Directory, use these settings:
+
+```
+Server URL: ldaps://ad.company.com:636
+User Search Base: OU=Users,DC=company,DC=com
+User Search Filter: (sAMAccountName={username})
+Use TLS: true
+TLS Verify: true
+```
+
+## Security Considerations
+
+### TLS Enforcement
+
+LDAP authentication **requires TLS** by default. Cleartext LDAP connections are rejected.
+
+- Use `ldaps://` for LDAPS (port 636)
+- Use `ldap://` + "Use TLS" for StartTLS (port 389)
+
+### Certificate Validation
+
+TLS certificates are validated by default. For self-signed certificates:
+
+1. Obtain the CA certificate
+2. Set "CA Bundle Path" to the certificate file
+3. Keep "Verify TLS" enabled
+
+### Rate Limiting
+
+Authentication attempts are rate-limited:
+- 5 attempts per IP per minute
+- 10 attempts per username per minute
+
+### Audit Logging
+
+All authentication attempts are logged in structured JSON format:
+
+```json
+{
+  "timestamp": "2024-01-01T12:00:00Z",
+  "event_type": "ldap_auth_attempt",
+  "username_hash": "a1b2c3d4...",
+  "outcome": "success",
+  "source_ip": "192.168.1.1"
+}
+```
+
+## Troubleshooting
+
+### Connection Test Fails
+
+1. Verify server URL is correct
+2. Check firewall rules (port 636 for LDAPS, 389 for LDAP)
+3. Verify service account credentials
+4. Check CA bundle path if using custom certificates
+
+### Authentication Fails
+
+1. Verify user exists in LDAP
+2. Check search base and filter are correct
+3. Verify user credentials are correct
+4. Check Khoj logs for detailed error messages
+
+### Certificate Errors
+
+If you see certificate validation errors:
+1. Export the CA certificate from your domain controller
+2. Place it in a file accessible to Khoj
+3. Set "CA Bundle Path" to the certificate file
+
+## Migration
+
+### From Other Authentication
+
+To switch from other authentication to LDAP:
+
+1. Configure LDAP settings in the web UI
+2. Test the connection
+3. Enable LDAP authentication
+4. Existing users can link their accounts by logging in via LDAP
+
+### Disabling LDAP
+
+To disable LDAP authentication:
+
+1. Uncheck "Enable LDAP authentication" in settings
+2. Users will revert to other authentication methods (email, Google)
