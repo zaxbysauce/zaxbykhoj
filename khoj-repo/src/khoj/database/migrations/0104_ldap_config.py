@@ -6,7 +6,7 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("database", "0103_add_ldap_dn_to_user"),
+        ("database", "0102_add_chunk_scale"),
     ]
 
     operations = [

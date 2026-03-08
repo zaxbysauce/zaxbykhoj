@@ -880,6 +880,7 @@ class Entry(DbBaseModel):
     def save(self, *args, **kwargs):
         if self.user and self.agent:
             raise ValidationError("An Entry cannot be associated with both a user and an agent.")
+        super().save(*args, **kwargs)
 
 
 class EntryDates(DbBaseModel):

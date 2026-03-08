@@ -1,9 +1,10 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
 name = "khoj"
+version = "2.0.0"
 description = "Your Second Brain"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
@@ -96,7 +97,6 @@ dependencies = [
     "e2b-code-interpreter ~= 1.0.0",
     "mcp >= 1.23.0",
 ]
-dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://khoj.dev"
@@ -131,10 +131,6 @@ dev = [
     "datasets",
     "pandas",
 ]
-
-[tool.hatch.version]
-source = "vcs"
-raw-options.local_scheme = "no-local-version"  # PEP440 compliant version for PyPi
 
 [tool.hatch.build.targets.sdist]
 include = ["src/khoj"]
