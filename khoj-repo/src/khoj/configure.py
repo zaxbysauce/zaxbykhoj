@@ -379,6 +379,7 @@ def configure_routes(app):
     from khoj.routers.api_model import api_model
     from khoj.routers.notion import notion_router
     from khoj.routers.web_client import web_client
+    from khoj.routers.ldap import router as ldap_router
 
     app.include_router(api, prefix="/api")
     app.include_router(api_chat, prefix="/api/chat")
@@ -394,6 +395,7 @@ def configure_routes(app):
         from khoj.routers.auth import auth_router
 
         app.include_router(auth_router, prefix="/auth")
+        app.include_router(ldap_router)
         logger.info("🔑 Enabled Authentication")
 
     if state.billing_enabled:
