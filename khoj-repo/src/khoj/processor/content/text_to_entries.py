@@ -4,7 +4,8 @@ import re
 import uuid
 from abc import ABC, abstractmethod
 from itertools import repeat
-from typing import Any, Callable, List, Set, Tuple
+from typing import Callable, List, Optional, Set, Tuple, Union
+from warnings import warn
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from tqdm import tqdm
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class TextToEntries(ABC):
-    def __init__(self, config: Any = None):
+    def __init__(self, config: Optional[object] = None):
         self.embeddings_model = state.embeddings_model
         self.date_filter = DateFilter()
 
@@ -72,7 +73,8 @@ class TextToEntries(ABC):
 
         Args:
             entries: List of Entry objects to chunk
-            max_tokens: Deprecated. Use chunk_sizes instead. Single chunk size for backward compatibility.
+            max_tokens: Deprecated (v2.0.0). Use chunk_sizes instead. Single chunk size for backward compatibility.
+                        Will be removed in v2.2.0. Migrate to chunk_sizes parameter.
             max_word_length: Maximum word length to allow in chunks
             raw_is_compiled: Whether raw text is same as compiled text
             chunk_sizes: List of chunk sizes to use for multi-scale chunking. Default: [512, 1024, 2048]
@@ -82,6 +84,12 @@ class TextToEntries(ABC):
         """
         # Handle backward compatibility for max_tokens parameter
         if max_tokens is not None and chunk_sizes is None:
+            warn(
+                "max_tokens parameter is deprecated (v2.0.0) and will be removed in v2.2.0. "
+                "Use chunk_sizes parameter instead. Example: chunk_sizes=[512] for single chunk size.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
             chunk_sizes = [max_tokens]
         elif chunk_sizes is None:
             chunk_sizes = [512, 1024, 2048]

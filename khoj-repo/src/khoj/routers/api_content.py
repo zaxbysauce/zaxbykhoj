@@ -33,11 +33,10 @@ from khoj.processor.content.pdf.pdf_to_entries import PdfToEntries
 from khoj.routers.helpers import (
     ApiIndexedDataLimiter,
     CommonQueryParams,
-    configure_content,
     get_file_content,
-    get_user_config,
     update_telemetry_state,
 )
+from khoj.routers.auth_helpers import configure_content, user_config_to_response
 from khoj.utils import state
 from khoj.utils.rawconfig import GithubContentConfig, NotionContentConfig
 from khoj.utils.state import SearchType
@@ -120,9 +119,6 @@ async def patch_content(
 @requires(["authenticated"])
 def get_content_github(request: Request) -> Response:
     user = request.user.object
-    user_config = get_user_config(user, request)
-    del user_config["request"]
-
     current_github_config = get_user_github_config(user)
 
     if current_github_config:
@@ -144,28 +140,19 @@ def get_content_github(request: Request) -> Response:
     else:
         current_config = {}  # type: ignore
 
-    user_config["current_config"] = current_config
-
-    # Return config data as a JSON response
-    return Response(content=json.dumps(user_config), media_type="application/json", status_code=200)
+    return user_config_to_response(user, request, extra_config={"current_config": current_config})
 
 
 @api_content.get("/notion", response_class=Response)
 @requires(["authenticated"])
 def get_content_notion(request: Request) -> Response:
     user = request.user.object
-    user_config = get_user_config(user, request)
-    del user_config["request"]
-
     current_notion_config = get_user_notion_config(user)
     token = current_notion_config.token if current_notion_config else ""
     current_config = NotionContentConfig(token=token)
     current_config = json.loads(current_config.model_dump_json())
 
-    user_config["current_config"] = current_config
-
-    # Return config data as a JSON response
-    return Response(content=json.dumps(user_config), media_type="application/json", status_code=200)
+    return user_config_to_response(user, request, extra_config={"current_config": current_config})
 
 
 @api_content.post("/github", status_code=200)

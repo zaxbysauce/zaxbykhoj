@@ -4,6 +4,7 @@ import logging
 import os
 from typing import Callable, List, Optional
 
+from khoj.common.operator_helpers import ChatEvent, get_message_from_queue
 from khoj.database.adapters import AgentAdapters, ConversationAdapters
 from khoj.database.models import Agent, ChatMessageModel, ChatModel, KhojUser, UserMemory
 from khoj.processor.conversation.utils import (
@@ -23,8 +24,8 @@ from khoj.processor.operator.operator_environment_base import (
 )
 from khoj.processor.operator.operator_environment_browser import BrowserEnvironment
 from khoj.processor.operator.operator_environment_computer import ComputerEnvironment
-from khoj.routers.helpers import ChatEvent, get_message_from_queue
 from khoj.utils.helpers import timer
+from khoj.utils.provider_config import is_openai_model
 from khoj.utils.rawconfig import LocationData
 
 logger = logging.getLogger(__name__)
@@ -39,10 +40,10 @@ async def operate_environment(
     previous_trajectory: Optional[OperatorRun] = None,
     environment_type: EnvironmentType = EnvironmentType.COMPUTER,
     send_status_func: Optional[Callable] = None,
-    query_images: Optional[List[str]] = None,  # TODO: Handle query images
+    query_images: Optional[List[str]] = None,  # Not yet implemented
     agent: Agent = None,
-    query_files: str = None,  # TODO: Handle query files
-    relevant_memories: Optional[List[UserMemory]] = None,  # TODO: Handle relevant memories
+    query_files: str = None,  # Not yet implemented
+    relevant_memories: Optional[List[UserMemory]] = None,  # Not yet implemented
     cancellation_event: Optional[asyncio.Event] = None,
     interrupt_queue: Optional[asyncio.Queue] = None,
     abort_message: Optional[str] = ChatEvent.END_EVENT.value,
@@ -69,7 +70,8 @@ async def operate_environment(
     max_context = await ConversationAdapters.aget_max_context_size(reasoning_model, user) or 20000
     max_iterations = int(os.getenv("KHOJ_OPERATOR_ITERATIONS", 100))
     operator_agent: OperatorAgent
-    if is_operator_model(reasoning_model.name) == ChatModel.ModelType.ANTHROPIC:
+    # Use configurable provider mapping for operator model detection
+    if is_operator_model(reasoning_model.name) == "anthropic":
         operator_agent = AnthropicOperatorAgent(
             query,
             reasoning_model,
@@ -79,9 +81,10 @@ async def operate_environment(
             chat_history,
             previous_trajectory,
             tracer,
+            query_images=query_images,
         )
-    # TODO: Remove once OpenAI Operator Agent is useful
-    elif is_operator_model(reasoning_model.name) == ChatModel.ModelType.OPENAI and False:
+    # OpenAI Operator Agent - Disabled: Not yet implemented
+    elif is_operator_model(reasoning_model.name) == "openai" and False:
         operator_agent = OpenAIOperatorAgent(
             query,
             reasoning_model,
@@ -92,14 +95,14 @@ async def operate_environment(
             previous_trajectory,
             tracer,
         )
-    # TODO: Remove once Binary Operator Agent is useful
+    # Binary Operator Agent - Disabled: Not yet implemented
     elif False:
         grounding_model_name = "ui-tars-1.5"
         grounding_model = await ConversationAdapters.aget_chat_model_by_name(grounding_model_name)
         if (
             not grounding_model
             or not grounding_model.vision_enabled
-            or not grounding_model.model_type == ChatModel.ModelType.OPENAI
+            or not is_openai_model(grounding_model.name, grounding_model.model_type)
         ):
             raise ValueError("Binary operator agent needs ui-tars-1.5 served over an OpenAI compatible API.")
         operator_agent = BinaryOperatorAgent(
@@ -229,15 +232,19 @@ async def operate_environment(
     yield operator_run
 
 
-def is_operator_model(model: str) -> ChatModel.ModelType | None:
-    """Check if the model is an operator model."""
-    operator_models = {
-        "gpt-4o": ChatModel.ModelType.OPENAI,
-        "claude-3-7-sonnet": ChatModel.ModelType.ANTHROPIC,
-        "claude-sonnet-4": ChatModel.ModelType.ANTHROPIC,
-        "claude-opus-4": ChatModel.ModelType.ANTHROPIC,
-    }
-    for operator_model in operator_models:
-        if model.startswith(operator_model):
-            return operator_models[operator_model]  # type: ignore[return-value]
+def is_operator_model(model_name: str) -> Optional[str]:
+    """Check if the model is an operator model.
+
+    Uses the configurable provider registry to determine the provider type.
+    Returns the provider type string (e.g., 'openai', 'anthropic') or None if not an operator model.
+    """
+    from khoj.utils.provider_config import provider_registry
+
+    # Use the provider registry to get the provider type
+    provider = provider_registry.get_provider_for_model(model_name)
+
+    # Only return anthropic or openai for operator models
+    if provider in ("anthropic", "openai"):
+        return provider
+
     return None

@@ -4,11 +4,13 @@ import requests  # Used for making HTTP requests
 from bs4 import BeautifulSoup
 from markdown_it import MarkdownIt
 
+from khoj.utils.config import ApiUrlConfig
+
 # Define constants for the script
 CHUNK_SIZE = 1024  # Size of chunks to read/write at a time
 ELEVEN_LABS_API_KEY = os.getenv("ELEVEN_LABS_API_KEY", None)  # Your API key for authentication
 VOICE_ID = "RPEIZnKMqlQiZyZd1Dae"  # ID of the voice model to use. MALE - Christopher - friendly guy next door.
-ELEVEN_API_URL = "https://api.elevenlabs.io/v1/text-to-speech"  # Base URL for the Text-to-Speech API
+ELEVEN_API_URL = ApiUrlConfig.ELEVEN_API_URL  # Base URL for the Text-to-Speech API
 
 markdown_renderer = MarkdownIt()
 

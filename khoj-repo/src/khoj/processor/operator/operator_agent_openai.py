@@ -1,5 +1,6 @@
 import json
 import logging
+import platform
 from copy import deepcopy
 from datetime import datetime
 from textwrap import dedent
@@ -399,10 +400,8 @@ class OpenAIOperatorAgent(OperatorAgent):
     def get_tools(self, environment_type: EnvironmentType, current_state: EnvState) -> list[dict]:
         """Return the tools available for the OpenAI operator."""
         if environment_type == EnvironmentType.COMPUTER:
-            # TODO: Get OS info from the environment
-            # For now, assume Linux as the environment OS
-            environment_os = "linux"
-            # environment = "mac" if platform.system() == "Darwin" else "windows" if platform.system() == "Windows" else "linux"
+            # Detect the environment OS from the platform
+            environment_os = "mac" if platform.system() == "Darwin" else "windows" if platform.system() == "Windows" else "linux"
         else:
             environment_os = "browser"
 

@@ -561,7 +561,7 @@ async def save_to_conversation_log(
     train_of_thought: List[Any] = [],
     tracer: Dict[str, Any] = {},
 ):
-    from khoj.routers.helpers import ai_update_memories
+    from khoj.common.memory_helpers import ai_update_memories
 
     user_message_time = user_message_time or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     turn_id = tracer.get("mid") or str(uuid.uuid4())
@@ -1032,7 +1032,7 @@ def defilter_query(query: str):
 
 @dataclass
 class ImageWithType:
-    content: Any
+    content: Union[str, bytes, "PIL.Image.Image"]
     type: str
 
 
@@ -1062,7 +1062,7 @@ def get_image_from_url(image_url: str, type="pil"):
         content_type = response.headers.get("content-type") or mimetypes.guess_type(image_url)[0] or "image/webp"
 
         # Convert image to desired format
-        image_data: Any = None
+        image_data: Union[str, bytes, PIL.Image.Image] = None
         if type == "b64":
             image_data = base64.b64encode(response.content).decode("utf-8")
         elif type == "pil":

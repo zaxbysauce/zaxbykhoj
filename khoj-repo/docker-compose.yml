@@ -2,9 +2,9 @@ services:
   database:
     image: docker.io/pgvector/pgvector:pg15
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
     volumes:
       - khoj_db:/var/lib/postgresql/data/
     healthcheck:
@@ -63,15 +63,16 @@ services:
       # - /var/run/docker.sock:/var/run/docker.sock
     # Use 0.0.0.0 to explicitly set the host ip for the service on the container. https://pythonspeed.com/articles/docker-connection-refused/
     environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
       - POSTGRES_HOST=database
       - POSTGRES_PORT=5432
-      - KHOJ_DJANGO_SECRET_KEY=secret
+      # Set these environment variables before deployment for security
+      - KHOJ_DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - KHOJ_DEBUG=False
-      - KHOJ_ADMIN_EMAIL=username@example.com
-      - KHOJ_ADMIN_PASSWORD=password
+      - KHOJ_ADMIN_EMAIL=${DJANGO_ADMIN_EMAIL}
+      - KHOJ_ADMIN_PASSWORD=${DJANGO_ADMIN_PASSWORD}
       # Default URL of Terrarium, the default Python sandbox used by Khoj to run code. Its container is specified above
       - KHOJ_TERRARIUM_URL=http://sandbox:8080
       # Uncomment line below to have Khoj run code in remote E2B code sandbox instead of the self-hosted Terrarium sandbox above. Get your E2B API key from https://e2b.dev/.

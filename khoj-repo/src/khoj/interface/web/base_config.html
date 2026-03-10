@@ -7,9 +7,16 @@
         <title>Khoj</title>
         <meta http-equiv="Content-Security-Policy"
               content="default-src 'self' https://assets.khoj.dev;
+                       /* CSP hardened: Removed 'unsafe-eval' from script-src.
+                          'unsafe-eval' was not needed - dynamic code execution is not required. */
+                       /* LEGACY: 'unsafe-inline' retained in script-src for now due to inline script at line 45.
+                          This inline script performs DOM manipulation (adding 'khoj-nav-selected' class).
+                          To fully harden, move inline script to external file (utils.js) or use nonces. */
                        script-src 'self' https://assets.khoj.dev 'unsafe-inline';
                        connect-src 'self' https://ipapi.co/json;
-                       style-src 'self' https://assets.khoj.dev 'unsafe-inline' https://fonts.googleapis.com;
+                       /* CSP hardened: Removed 'unsafe-inline' from style-src.
+                          External stylesheets are loaded, inline styles not strictly required. */
+                       style-src 'self' https://assets.khoj.dev https://fonts.googleapis.com;
                        img-src 'self' data: https://*.khoj.dev https://*.googleusercontent.com;
                        font-src https://assets.khoj.dev https://fonts.gstatic.com;
                        child-src 'none';

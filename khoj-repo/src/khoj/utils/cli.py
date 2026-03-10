@@ -1,6 +1,8 @@
 import argparse
 import logging
+import os
 import pathlib
+import tempfile
 from importlib.metadata import version
 
 logger = logging.getLogger(__name__)
@@ -10,7 +12,7 @@ def _setup_parser(parser: argparse.ArgumentParser):
     """Setup argument parser with all CLI arguments."""
     parser.add_argument(
         "--log-file",
-        default="~/.khoj/khoj.log",
+        default=os.path.expanduser("~/.khoj/khoj.log"),
         type=pathlib.Path,
         help="File path for server logs. Default: ~/.khoj/khoj.log",
     )
@@ -20,7 +22,7 @@ def _setup_parser(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--socket",
         type=pathlib.Path,
-        help="Path to UNIX socket for server. Use to run server behind reverse proxy. Default: /tmp/uvicorn.sock",
+        help=f"Path to UNIX socket for server. Use to run server behind reverse proxy. Default: {os.path.join(tempfile.gettempdir(), 'uvicorn.sock')}",
     )
     parser.add_argument("--sslcert", type=str, help="Path to SSL certificate file")
     parser.add_argument("--sslkey", type=str, help="Path to SSL key file")

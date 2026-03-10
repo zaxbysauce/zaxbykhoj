@@ -59,7 +59,14 @@ class AnthropicOperatorAgent(OperatorAgent):
         tools = self.get_tools(self.environment_type, current_state)
 
         if is_none_or_empty(self.messages):
-            self.messages = [AgentMessage(role="user", content=self.query)]
+            # Construct message content with optional images for fallback
+            if self.query_images:
+                message_content = [{"type": "text", "text": self.query}]
+                for image in self.query_images:
+                    message_content.append({"type": "image_url", "image_url": {"url": image}})
+            else:
+                message_content = self.query
+            self.messages = [AgentMessage(role="user", content=message_content)]
 
         # Trigger trajectory compression if exceed size limit
         if len(self.messages) > self.message_limit:

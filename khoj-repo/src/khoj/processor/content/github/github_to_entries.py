@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from typing import Dict, List, Tuple
@@ -40,14 +41,14 @@ class GithubToEntries(TextToEntries):
             self.session.headers.update({"Authorization": f"token {self.config.pat_token}"})
 
     @staticmethod
-    def wait_for_rate_limit_reset(response, func, *args, **kwargs):
+    async def wait_for_rate_limit_reset(response, func, *args, **kwargs):
         if response.status_code != 200 and response.headers.get("X-RateLimit-Remaining") == "0":
             wait_time = int(response.headers.get("X-RateLimit-Reset")) - int(time.time())
             logger.info(f"Github Rate limit reached. Waiting for {wait_time} seconds")
-            time.sleep(wait_time)
-            return func(*args, **kwargs)
+            await asyncio.sleep(wait_time)
+            return await func(*args, **kwargs)
         else:
-            return
+            return None
 
     def process(self, files: dict[str, str], user: KhojUser, regenerate: bool = False) -> Tuple[int, int]:
         if is_none_or_empty(self.config.pat_token):
@@ -61,14 +62,14 @@ class GithubToEntries(TextToEntries):
         return self.update_entries_with_ids(current_entries, user=user)
 
     def process_repo(self, repo: GithubRepoConfig):
-        repo_url = f"https://api.github.com/repos/{repo.owner}/{repo.name}"
+        repo_url = f"{ApiUrlConfig.GITHUB_API_URL}/repos/{repo.owner}/{repo.name}"
         repo_shorthand = f"{repo.owner}/{repo.name}"
         logger.info(f"Processing github repo {repo_shorthand}")
         with timer("Download files from github repo", logger):
             try:
                 markdown_files, org_files, plaintext_files = self.get_files(repo_url, repo)
             except ConnectionAbortedError as e:
-                logger.error(f"Github rate limit reached. Skip indexing github repo {repo_shorthand}")
+                logger.error(f"Github rate limit reached. Skip indexing github repo {repo_shorthand}", exc_info=True)
                 raise e
             except Exception as e:
                 logger.error(f"Unable to download github repo {repo_shorthand}", exc_info=True)
@@ -159,7 +160,7 @@ class GithubToEntries(TextToEntries):
                 try:
                     content_type = magika.identify_bytes(content_bytes).output.group
                 except Exception:
-                    logger.error(f"Unable to identify content type of file at {url_path}. Skip indexing it")
+                    logger.error(f"Unable to identify content type of file at {url_path}. Skip indexing it", exc_info=True)
                     continue
 
                 # Add non-binary file contents and URL to list
@@ -167,7 +168,7 @@ class GithubToEntries(TextToEntries):
                     try:
                         content_str = content_bytes.decode("utf-8")
                     except Exception:
-                        logger.error(f"Unable to decode content of file at {url_path}. Skip indexing it")
+                        logger.error(f"Unable to decode content of file at {url_path}. Skip indexing it", exc_info=True)
                         continue
                     plaintext_files += [{"content": content_str, "path": url_path}]
 
@@ -188,8 +189,8 @@ class GithubToEntries(TextToEntries):
                 try:
                     content += chunk.decode("utf-8") if decode else chunk
                 except Exception as e:
-                    logger.error(f"Unable to decode chunk from {file_url}")
-                    logger.error(e)
+                    logger.error(f"Unable to decode chunk from {file_url}", exc_info=True)
+                    logger.error(e, exc_info=True)
 
         return content
 

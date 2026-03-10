@@ -414,9 +414,11 @@ function addCSPHeaderToSession () {
     // Construct Content Security Policy
     const defaultDomains = `'self' ${hostURL} https://app.khoj.dev https://assets.khoj.dev`;
     const default_src = `default-src ${defaultDomains};`;
-    const script_src = `script-src ${defaultDomains} 'unsafe-inline';`;
+    // CSP hardened: Removed 'unsafe-inline' from script-src for improved security
+    const script_src = `script-src ${defaultDomains};`;
     const connect_src = `connect-src ${hostURL} https://ipapi.co/json;`;
-    const style_src = `style-src ${defaultDomains} 'unsafe-inline' https://fonts.googleapis.com;`;
+    // CSP hardened: Removed 'unsafe-inline' from style-src for improved security
+    const style_src = `style-src ${defaultDomains} https://fonts.googleapis.com;`;
     const img_src = `img-src ${defaultDomains} data: https://*.khoj.dev https://*.googleusercontent.com;`;
     const font_src = `font-src https://fonts.gstatic.com;`;
     const child_src = `child-src 'none';`;

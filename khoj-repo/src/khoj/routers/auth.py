@@ -255,17 +255,17 @@ async def auth(request: Request):
 
     # Validate the OAuth response
     if verified_data.status_code != 200:
-        logger.error(f"Token request failed: {verified_data.text}")
+        logger.error(f"Token request failed: {verified_data.text}", exc_info=True)
         try:
             error_json = verified_data.json()
-            logger.error(f"Error response JSON for Google verification: {error_json}")
+            logger.error(f"Error response JSON for Google verification: {error_json}", exc_info=True)
         except ValueError:
-            logger.error("Response content is not valid JSON")
+            logger.error("Response content is not valid JSON", exc_info=True)
         verified_data.raise_for_status()
 
     credential = verified_data.json().get("id_token")
     if not credential:
-        logger.error("Missing id_token in OAuth response")
+        logger.error("Missing id_token in OAuth response", exc_info=True)
         return RedirectResponse(url="/login?error=invalid_token", status_code=HTTP_302_FOUND)
 
     # Validate the OAuth token

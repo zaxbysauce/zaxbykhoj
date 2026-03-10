@@ -42,6 +42,18 @@ from typing import Dict, List, Tuple
 indent_regex = re.compile(r"^ *")
 
 
+def validate_path(base_dir: Path, user_path: str) -> Path:
+    """Validate that user_path is within base_dir to prevent path traversal."""
+    user_path_obj = Path(user_path)
+    if user_path_obj.is_absolute():
+        raise ValueError(f"Absolute paths not allowed: {user_path}")
+    resolved = (base_dir / user_path).resolve()
+    base_resolved = base_dir.resolve()
+    if not str(resolved).startswith(str(base_resolved)):
+        raise ValueError(f"Path traversal attempt detected: {user_path}")
+    return resolved
+
+
 def normalize_filename(filename):
     "Normalize and escape filename for rendering"
     if not Path(filename).is_absolute():
@@ -54,7 +66,12 @@ def normalize_filename(filename):
 
 
 def makelist_with_filepath(filename):
-    f = open(filename, "r")
+    """Parse org-mode file and return list of Orgnode objects. Validates path to prevent traversal attacks."""
+    # Use parent directory of the file as base for path validation
+    file_path = Path(filename)
+    base_dir = file_path.parent if file_path.is_absolute() else Path.cwd()
+    validated_path = validate_path(base_dir, str(filename))
+    f = open(validated_path, "r")
     return makelist(f, filename)
 
 

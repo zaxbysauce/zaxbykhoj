@@ -1,9 +1,6 @@
 import asyncio
 import base64
 import json
-
-from django.conf import settings
-from khoj.processor.retrieval_evaluator import RetrievalEvaluation, RetrievalEvaluator
 import logging
 import time
 import uuid
@@ -13,6 +10,8 @@ from functools import partial
 from typing import Any, Dict, List, Optional
 from urllib.parse import unquote
 
+import httpx
+from django.conf import settings
 from fastapi import (
     APIRouter,
     Depends,
@@ -25,6 +24,7 @@ from fastapi.responses import RedirectResponse, Response, StreamingResponse
 from fastapi.websockets import WebSocketState
 from starlette.authentication import has_required_scope, requires
 from starlette.requests import URL, Headers
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from khoj.app.settings import ALLOWED_HOSTS
 from khoj.database.adapters import (
@@ -47,6 +47,8 @@ from khoj.processor.conversation.utils import (
 )
 from khoj.processor.image.generate import text_to_image
 from khoj.processor.operator import operate_environment
+from khoj.processor.query_transformer import QueryTransformer
+from khoj.processor.retrieval_evaluator import RetrievalEvaluation, RetrievalEvaluator
 from khoj.processor.speech.text_to_speech import TextToSpeechError, generate_text_to_speech
 from khoj.processor.tools.online_search import (
     deduplicate_organic_results,
@@ -54,7 +56,6 @@ from khoj.processor.tools.online_search import (
     search_online,
 )
 from khoj.processor.tools.run_code import run_code
-from khoj.processor.query_transformer import QueryTransformer
 from khoj.routers.email import send_query_feedback
 from khoj.routers.helpers import (
     ApiImageRateLimiter,
@@ -670,6 +671,12 @@ def delete_message(request: Request, delete_request: DeleteMessageRequestBody) -
         return Response(content=json.dumps({"status": "error", "message": "Message not found"}), status_code=404)
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError)),
+    reraise=True,
+)
 async def event_generator(
     body: ChatRequestBody,
     user_scope: Any,
@@ -781,7 +788,7 @@ async def event_generator(
                             )
                         )
             except Exception as e:
-                logger.error(f"Error in disconnect monitor: {e}")
+                logger.error(f"Error in disconnect monitor: {e}", exc_info=True)
         elif isinstance(request_obj, WebSocket):
             while request_obj.client_state == WebSocketState.CONNECTED and not cancellation_event.is_set():
                 await asyncio.sleep(1)
@@ -1007,7 +1014,7 @@ async def event_generator(
                 tracer=tracer,
             )
         except ValueError as e:
-            logger.error(f"Error getting data sources and output format: {e}. Falling back to default.")
+            logger.error(f"Error getting data sources and output format: {e}. Falling back to default.", exc_info=True)
             chosen_io = {"sources": [ConversationCommand.General], "output": ConversationCommand.Text}
 
         conversation_commands = chosen_io.get("sources") + [chosen_io.get("output")]
@@ -1750,6 +1757,9 @@ async def process_chat_request(
     except asyncio.CancelledError:
         logger.debug(f"Chat request cancelled for user {websocket.scope['user'].object.id}")
         raise
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as e:
+        logger.warning(f"Failed to connect after retries: {e}")
+        await websocket.send_text(json.dumps({"error": "Service temporarily unavailable. Please try again later."}))
     except Exception as e:
         await websocket.send_text(json.dumps({"error": "Internal server error"}))
         logger.error(f"Error processing chat request: {e}", exc_info=True)
@@ -1770,13 +1780,21 @@ async def chat(
     ),
     image_rate_limiter=Depends(ApiImageRateLimiter(max_images=10, max_combined_size_mb=20)),
 ):
-    response_iterator = event_generator(
-        body,
-        request.user,
-        common,
-        request.headers,
-        request,
-    )
+    try:
+        response_iterator = event_generator(
+            body,
+            request.user,
+            common,
+            request.headers,
+            request,
+        )
+    except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as e:
+        logger.warning(f"Failed to connect after retries: {e}")
+        return Response(
+            content=json.dumps({"status": "error", "message": "Service temporarily unavailable. Please try again later."}),
+            media_type="application/json",
+            status_code=503,
+        )
 
     # Stream Text Response
     if body.stream:

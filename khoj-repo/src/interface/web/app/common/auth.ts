@@ -56,6 +56,7 @@ export interface UserConfig {
     username: string;
     user_photo: string | null;
     is_active: boolean;
+    is_admin: boolean;
     given_name: string;
     phone_number: string;
     is_phone_number_verified: boolean;

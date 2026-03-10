@@ -28,7 +28,7 @@ from khoj.processor.conversation.utils import (
     clean_code_python,
     construct_chat_history,
 )
-from khoj.routers.helpers import send_message_to_model_wrapper
+from khoj.common.operator_helpers import send_message_to_model_wrapper
 from khoj.utils.helpers import (
     is_e2b_code_sandbox_enabled,
     is_none_or_empty,
@@ -36,13 +36,14 @@ from khoj.utils.helpers import (
     truncate_code_context,
 )
 from khoj.utils.rawconfig import LocationData
+from khoj.utils.config import TimeoutConfig
 
 logger = logging.getLogger(__name__)
 
 
 SANDBOX_URL = os.getenv("KHOJ_TERRARIUM_URL")
 DEFAULT_E2B_TEMPLATE = "pmt2o0ghpang8gbiys57"
-HOME_DIR = "/home/user"
+HOME_DIR = os.getenv("E2B_HOME_DIR", os.path.expanduser("~"))
 
 
 class GeneratedCode(NamedTuple):
@@ -110,7 +111,7 @@ async def run_code(
         # Call the sandbox_url/stop GET API endpoint to stop the code sandbox
         error = f"Failed to run code for {instructions} with Timeout error: {e}"
         try:
-            await aiohttp.ClientSession().get(f"{sandbox_url}/stop", timeout=5)
+            await aiohttp.ClientSession().get(f"{sandbox_url}/stop", timeout=TimeoutConfig.SANDBOX_STOP_TIMEOUT)
         except Exception as e:
             error += f"\n\nFailed to stop code sandbox with error: {e}"
         raise ValueError(error)
@@ -236,8 +237,8 @@ async def execute_e2b(code: str, input_files: list[dict]) -> dict[str, Any]:
     sandbox = await AsyncSandbox.create(
         api_key=os.getenv("E2B_API_KEY"),
         template=os.getenv("E2B_TEMPLATE", DEFAULT_E2B_TEMPLATE),
-        timeout=120,
-        request_timeout=30,
+        timeout=TimeoutConfig.OPERATOR_ENVIRONMENT_TIMEOUT,
+        request_timeout=TimeoutConfig.E2B_REQUEST_TIMEOUT,
     )
 
     try:
@@ -252,7 +253,7 @@ async def execute_e2b(code: str, input_files: list[dict]) -> dict[str, Any]:
         original_files = {E2bFile(f.name, f.path) for f in await sandbox.files.list(HOME_DIR, depth=1)}
 
         # Execute code from main.py file
-        execution = await sandbox.run_code(code=code, timeout=60)
+        execution = await sandbox.run_code(code=code, timeout=TimeoutConfig.SANDBOX_EXECUTION_TIMEOUT)
 
         # Collect output files
         output_files = []
@@ -265,7 +266,7 @@ async def execute_e2b(code: str, input_files: list[dict]) -> dict[str, Any]:
         def read_format(f):
             return "bytes" if Path(f.name).suffix in image_file_ext else "text"
 
-        download_tasks = [sandbox.files.read(f.path, format=read_format(f), request_timeout=30) for f in new_files]
+        download_tasks = [sandbox.files.read(f.path, format=read_format(f), request_timeout=TimeoutConfig.E2B_REQUEST_TIMEOUT) for f in new_files]
         downloaded_files = await asyncio.gather(*download_tasks)
         for f, content in zip(new_files, downloaded_files):
             if isinstance(content, bytes):
@@ -326,7 +327,7 @@ async def execute_terrarium(
     headers = {"Content-Type": "application/json"}
     data = {"code": code, "files": input_data}
     async with aiohttp.ClientSession() as session:
-        async with session.post(sandbox_url, json=data, headers=headers, timeout=30) as response:
+        async with session.post(sandbox_url, json=data, headers=headers, timeout=TimeoutConfig.TERRARIUM_REQUEST_TIMEOUT) as response:
             if response.status == 200:
                 result: dict[str, Any] = await response.json()
                 result["code"] = code

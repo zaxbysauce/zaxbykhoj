@@ -49,6 +49,7 @@ from khoj.utils.helpers import (
     is_none_or_empty,
     is_promptrace_enabled,
 )
+from khoj.utils.config import TimeoutConfig
 
 logger = logging.getLogger(__name__)
 
@@ -158,7 +159,7 @@ def completion_with_backoff(
     elif is_groq_api(api_base_url):
         model_kwargs["service_tier"] = "auto"
 
-    read_timeout = 300 if is_local_api(api_base_url) else 60
+    read_timeout = TimeoutConfig.OPENAI_READ_TIMEOUT_LOCAL if is_local_api(api_base_url) else TimeoutConfig.OPENAI_READ_TIMEOUT_REMOTE
     if os.getenv("KHOJ_LLM_SEED"):
         model_kwargs["seed"] = int(os.getenv("KHOJ_LLM_SEED"))
 
@@ -360,7 +361,7 @@ async def chat_completion_with_backoff(
     elif is_groq_api(api_base_url):
         model_kwargs["service_tier"] = "auto"
 
-    read_timeout = 300 if is_local_api(api_base_url) else 60
+    read_timeout = TimeoutConfig.OPENAI_READ_TIMEOUT_LOCAL if is_local_api(api_base_url) else TimeoutConfig.OPENAI_READ_TIMEOUT_REMOTE
     if os.getenv("KHOJ_LLM_SEED"):
         model_kwargs["seed"] = int(os.getenv("KHOJ_LLM_SEED"))
 
@@ -494,7 +495,7 @@ def responses_completion_with_backoff(
         model_kwargs.pop("top_p", None)
         model_kwargs.pop("stop", None)
 
-    read_timeout = 300 if is_local_api(api_base_url) else 60
+    read_timeout = TimeoutConfig.OPENAI_READ_TIMEOUT_LOCAL if is_local_api(api_base_url) else TimeoutConfig.OPENAI_READ_TIMEOUT_REMOTE
 
     # Stream and aggregate
     model_response: OpenAIResponse = client.responses.create(
@@ -607,7 +608,7 @@ async def responses_chat_completion_with_backoff(
         model_kwargs.pop("top_p", None)
         model_kwargs.pop("stop", None)
 
-    read_timeout = 300 if is_local_api(api_base_url) else 60
+    read_timeout = TimeoutConfig.OPENAI_READ_TIMEOUT_LOCAL if is_local_api(api_base_url) else TimeoutConfig.OPENAI_READ_TIMEOUT_REMOTE
 
     aggregated_text = ""
     last_final: Optional[OpenAIResponse] = None

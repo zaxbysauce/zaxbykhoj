@@ -19,7 +19,7 @@ from khoj.processor.operator.operator_environment_base import (
     EnvState,
     EnvStepResult,
 )
-from khoj.routers.helpers import send_message_to_model_wrapper
+from khoj.common.operator_helpers import send_message_to_model_wrapper
 from khoj.utils.helpers import get_openai_async_client, is_none_or_empty
 
 logger = logging.getLogger(__name__)

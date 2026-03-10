@@ -1,3 +1,4 @@
+import hashlib
 import logging
 from typing import List
 
@@ -14,6 +15,7 @@ from tenacity import (
 from torch import nn
 
 from khoj.database.models import SearchModelConfig
+from khoj.utils.cache import _query_embeddings_cache
 from khoj.utils.helpers import (
     fix_json_dict,
     get_device,
@@ -51,11 +53,37 @@ class EmbeddingsModel:
                 self.embeddings_model = SentenceTransformer(self.model_name, **self.model_kwargs)
 
     def embed_query(self, query):
+        """Generate embedding for a query string with caching.
+
+        Caches query embeddings to avoid redundant computations for repeated queries.
+        """
+        # Generate cache key from query and model configuration
+        cache_key = self._get_query_cache_key(query)
+
+        # Check cache first
+        if cache_key in _query_embeddings_cache:
+            return _query_embeddings_cache[cache_key]
+
+        # Compute embedding
         if self.inference_endpoint_type == SearchModelConfig.ApiType.HUGGINGFACE:
-            return self.embed_with_hf([query])[0]
+            result = self.embed_with_hf([query])[0]
         elif self.inference_endpoint_type == SearchModelConfig.ApiType.OPENAI:
-            return self.embed_with_openai([query])[0]
-        return self.embeddings_model.encode([query], **self.query_encode_kwargs)[0]
+            result = self.embed_with_openai([query])[0]
+        else:
+            result = self.embeddings_model.encode([query], **self.query_encode_kwargs)[0]
+
+        # Cache the result
+        _query_embeddings_cache[cache_key] = result
+        return result
+
+    def _get_query_cache_key(self, query: str) -> str:
+        """Generate a cache key for query embedding based on query and model config."""
+        key_parts = [
+            self.model_name or "",
+            str(self.inference_endpoint_type) if self.inference_endpoint_type else "",
+            query,
+        ]
+        return hashlib.md5("|".join(key_parts).encode()).hexdigest()
 
     @retry(
         retry=retry_if_exception_type(requests.exceptions.HTTPError),

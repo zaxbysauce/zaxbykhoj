@@ -1,359 +1,217 @@
 {
   "schema_version": "1.0.0",
-  "title": "Khoj Authentication Enhancement",
-  "swarm": "khoj-auth-enhancement-2026",
+  "title": "Comprehensive Codebase Review - Khoj",
+  "swarm": "lowtier",
   "current_phase": 1,
   "phases": [
     {
       "id": 1,
-      "name": "Auth Disabled by Default",
+      "name": "Codebase Ingest & Inventory",
       "status": "pending",
       "tasks": [
         {
           "id": "1.1",
           "phase": 1,
           "status": "pending",
-          "size": "small",
-          "description": "Change anonymous_mode default from False to True in src/khoj/utils/state.py",
+          "size": "large",
+          "description": "Delegate Explorer to read every source file and build complete inventory",
           "depends": [],
-          "acceptance": "anonymous_mode defaults to True in state.py",
-          "files_touched": [
-            "src/khoj/utils/state.py"
-          ]
-        },
-        {
-          "id": "1.2",
-          "phase": 1,
-          "status": "pending",
-          "size": "small",
-          "description": "Change --anonymous-mode default from False to True in src/khoj/utils/cli.py and add --no-anonymous-mode flag",
-          "depends": [],
-          "acceptance": "CLI --anonymous-mode defaults to True and --no-anonymous-mode flag exists",
-          "files_touched": [
-            "src/khoj/utils/cli.py"
-          ]
-        },
-        {
-          "id": "1.3",
-          "phase": 1,
-          "status": "in_progress",
-          "size": "medium",
-          "description": "Update documentation/docs/advanced/authentication.mdx",
-          "depends": [],
-          "acceptance": "Documentation reflects anonymous mode as default",
-          "files_touched": [
-            "documentation/docs/advanced/authentication.mdx"
-          ]
-        },
-        {
-          "id": "1.4",
-          "phase": 1,
-          "status": "pending",
-          "size": "medium",
-          "description": "Create tests/test_anonymous_mode_default.py",
-          "depends": [],
-          "acceptance": "Test validates anonymous mode default behavior",
-          "files_touched": [
-            "tests/test_anonymous_mode_default.py"
-          ]
-        },
-        {
-          "id": "1.5",
-          "phase": 1,
-          "status": "pending",
-          "size": "medium",
-          "description": "Document migration steps for existing deployments",
-          "depends": [],
-          "acceptance": "Migration guide exists for existing deployments",
-          "files_touched": []
-        },
-        {
-          "id": "1.6",
-          "phase": 1,
-          "status": "pending",
-          "size": "small",
-          "description": "Document rollback procedure",
-          "depends": [],
-          "acceptance": "Rollback procedure documented",
+          "acceptance": ".swarm/codebase-inventory.md exists",
           "files_touched": []
         }
       ]
     },
     {
       "id": 2,
-      "name": "LDAP Dependencies and Secret Management",
+      "name": "Deep Code Analysis",
       "status": "pending",
       "tasks": [
         {
           "id": "2.1",
           "phase": 2,
-          "status": "in_progress",
-          "size": "small",
-          "description": "Add ldap3>=2.9.1 to pyproject.toml",
+          "status": "pending",
+          "size": "large",
+          "description": "Analyze Category 1: Broken/Incomplete Code",
           "depends": [],
-          "acceptance": "ldap3 dependency added to pyproject.toml",
-          "files_touched": [
-            "pyproject.toml"
-          ]
+          "acceptance": "Findings report with specific file:line references",
+          "files_touched": []
         },
         {
           "id": "2.2",
           "phase": 2,
           "status": "pending",
-          "size": "medium",
-          "description": "Create src/khoj/utils/secrets.py",
+          "size": "large",
+          "description": "Analyze Category 2: Security & Data Handling",
           "depends": [],
-          "acceptance": "secrets.py module created with secret retrieval interface",
-          "files_touched": [
-            "src/khoj/utils/secrets.py"
-          ]
+          "acceptance": "Findings report with specific file:line references",
+          "files_touched": []
         },
         {
           "id": "2.3",
           "phase": 2,
-          "status": "in_progress",
-          "size": "medium",
-          "description": "Add HashiCorp Vault adapter in src/khoj/utils/secrets_vault.py",
-          "depends": [
-            "2.2"
-          ],
-          "acceptance": "HashiCorp Vault adapter implemented",
-          "files_touched": [
-            "src/khoj/utils/secrets_vault.py"
-          ]
+          "status": "pending",
+          "size": "large",
+          "description": "Analyze Category 3: Cross-Platform Issues",
+          "depends": [],
+          "acceptance": "Findings report with specific file:line references",
+          "files_touched": []
         },
         {
           "id": "2.4",
           "phase": 2,
           "status": "pending",
-          "size": "small",
-          "description": "Verify NO password fields in LdapConfig database model",
+          "size": "large",
+          "description": "Analyze Category 4: Stale Comments & Docs",
           "depends": [],
-          "acceptance": "LdapConfig model has no password fields - only references to external secret storage",
+          "acceptance": "Findings report with specific file:line references",
+          "files_touched": []
+        },
+        {
+          "id": "2.5",
+          "phase": 2,
+          "status": "pending",
+          "size": "large",
+          "description": "Analyze Category 5: AI Code Smells",
+          "depends": [],
+          "acceptance": "Findings report with specific file:line references",
+          "files_touched": []
+        },
+        {
+          "id": "2.6",
+          "phase": 2,
+          "status": "pending",
+          "size": "large",
+          "description": "Analyze Category 6: Tech Debt & Architecture",
+          "depends": [],
+          "acceptance": "Findings report with specific file:line references",
+          "files_touched": []
+        },
+        {
+          "id": "2.7",
+          "phase": 2,
+          "status": "pending",
+          "size": "large",
+          "description": "Analyze Category 7: Performance",
+          "depends": [],
+          "acceptance": "Findings report with specific file:line references",
           "files_touched": []
         }
       ]
     },
     {
       "id": 3,
-      "name": "LDAP Database Models",
+      "name": "SME Consultations",
       "status": "pending",
       "tasks": [
         {
           "id": "3.1",
           "phase": 3,
-          "status": "in_progress",
-          "size": "small",
-          "description": "Create Django migration 0103_add_ldap_dn_to_user",
+          "status": "pending",
+          "size": "medium",
+          "description": "Consult Python/Django SME",
           "depends": [],
-          "acceptance": "Migration 0103 created and applies successfully",
-          "files_touched": [
-            "src/khoj/database/migrations/0103_add_ldap_dn_to_user.py"
-          ]
+          "acceptance": "SME guidance in .swarm/context.md",
+          "files_touched": []
         },
         {
           "id": "3.2",
           "phase": 3,
-          "status": "in_progress",
-          "size": "small",
-          "description": "Create Django migration 0104_ldap_config",
-          "depends": [
-            "3.1"
-          ],
-          "acceptance": "Migration 0104 created and applies successfully",
-          "files_touched": [
-            "src/khoj/database/migrations/0104_ldap_config.py"
-          ]
+          "status": "pending",
+          "size": "medium",
+          "description": "Consult Security SME",
+          "depends": [],
+          "acceptance": "SME guidance in .swarm/context.md",
+          "files_touched": []
         },
         {
           "id": "3.3",
           "phase": 3,
           "status": "pending",
           "size": "medium",
-          "description": "Implement LdapConfig model",
-          "depends": [
-            "3.2"
-          ],
-          "acceptance": "LdapConfig model implemented with all required fields",
-          "files_touched": [
-            "src/khoj/database/models/__init__.py"
-          ]
-        },
-        {
-          "id": "3.4",
-          "phase": 3,
-          "status": "pending",
-          "size": "small",
-          "description": "Add ldap_dn field to KhojUser",
-          "depends": [
-            "3.1"
-          ],
-          "acceptance": "ldap_dn field added to KhojUser model",
-          "files_touched": [
-            "src/khoj/database/models/__init__.py"
-          ]
-        },
-        {
-          "id": "3.5",
-          "phase": 3,
-          "status": "pending",
-          "size": "small",
-          "description": "Register LdapConfig in Django admin",
-          "depends": [
-            "3.3"
-          ],
-          "acceptance": "LdapConfig visible in Django admin interface",
-          "files_touched": [
-            "src/khoj/database/admin.py"
-          ]
+          "description": "Consult Testing SME",
+          "depends": [],
+          "acceptance": "SME guidance in .swarm/context.md",
+          "files_touched": []
         }
       ]
     },
     {
       "id": 4,
-      "name": "LDAP Authentication Backend - Part 1",
+      "name": "Compile & Classify Findings",
       "status": "pending",
       "tasks": [
         {
           "id": "4.1",
           "phase": 4,
-          "status": "in_progress",
-          "size": "small",
-          "description": "Create src/khoj/processor/auth/__init__.py",
+          "status": "pending",
+          "size": "large",
+          "description": "Compile findings into structured report",
           "depends": [],
-          "acceptance": "Auth processor package initialized",
-          "files_touched": [
-            "src/khoj/processor/auth/__init__.py"
-          ]
-        },
-        {
-          "id": "4.2",
-          "phase": 4,
-          "status": "in_progress",
-          "size": "medium",
-          "description": "Create LdapAuthBackend class structure",
-          "depends": [
-            "4.1",
-            "3.3"
-          ],
-          "acceptance": "LdapAuthBackend class structure defined",
-          "files_touched": [
-            "src/khoj/processor/auth/ldap_backend.py"
-          ]
-        },
-        {
-          "id": "4.3",
-          "phase": 4,
-          "status": "in_progress",
-          "size": "medium",
-          "description": "Implement LDAP TLS configuration",
-          "depends": [
-            "4.2"
-          ],
-          "acceptance": "LDAP TLS configuration implemented and tested",
-          "files_touched": [
-            "src/khoj/processor/auth/ldap_backend.py"
-          ]
-        },
-        {
-          "id": "4.4",
-          "phase": 4,
-          "status": "in_progress",
-          "size": "medium",
-          "description": "Implement LDAP injection prevention",
-          "depends": [
-            "4.2"
-          ],
-          "acceptance": "Input sanitization prevents LDAP injection attacks",
-          "files_touched": [
-            "src/khoj/processor/auth/ldap_backend.py"
-          ]
+          "acceptance": "Findings report in .swarm/context.md",
+          "files_touched": []
         }
       ]
     },
     {
       "id": 5,
-      "name": "LDAP Authentication Backend - Part 2",
+      "name": "Critical Security Fixes",
       "status": "pending",
       "tasks": [
         {
           "id": "5.1",
           "phase": 5,
-          "status": "pending",
-          "size": "large",
-          "description": "Implement two-bind authentication flow",
-          "depends": [
-            "4.3",
-            "4.4",
-            "2.3"
-          ],
-          "acceptance": "Two-bind LDAP authentication works correctly",
-          "files_touched": [
-            "src/khoj/processor/auth/ldap_backend.py"
-          ]
+          "status": "in_progress",
+          "size": "small",
+          "description": "Remove hardcoded credentials from docker-compose.yml",
+          "depends": [],
+          "acceptance": "grep -R 'secret|password' docker-compose.yml returns no hardcoded values",
+          "files_touched": []
         },
         {
           "id": "5.2",
           "phase": 5,
-          "status": "pending",
+          "status": "in_progress",
           "size": "medium",
-          "description": "Implement user provisioning",
-          "depends": [
-            "5.1"
-          ],
-          "acceptance": "Users are auto-provisioned on first LDAP login",
-          "files_touched": [
-            "src/khoj/processor/auth/ldap_backend.py"
-          ]
+          "description": "Replace unsafe eval() with ast.literal_eval",
+          "depends": [],
+          "acceptance": "grep -r 'eval(' grounding_agent_uitars.py returns no results",
+          "files_touched": []
         },
         {
           "id": "5.3",
           "phase": 5,
           "status": "pending",
-          "size": "medium",
-          "description": "Implement user sync",
-          "depends": [
-            "5.1"
-          ],
-          "acceptance": "User attributes sync from LDAP on login",
-          "files_touched": [
-            "src/khoj/processor/auth/ldap_backend.py"
-          ]
+          "size": "small",
+          "description": "Replace pickle with JSON in migrations",
+          "depends": [],
+          "acceptance": "grep -r 'pickle.load' migrations/ returns no results",
+          "files_touched": []
         },
         {
           "id": "5.4",
           "phase": 5,
           "status": "pending",
           "size": "medium",
-          "description": "Add audit logging",
-          "depends": [
-            "5.1"
-          ],
-          "acceptance": "All LDAP auth events are logged for audit",
-          "files_touched": [
-            "src/khoj/processor/auth/ldap_backend.py"
-          ]
+          "description": "Replace shell=True with shell=False",
+          "depends": [],
+          "acceptance": "grep -r 'shell=True' operator_environment_computer.py returns no results",
+          "files_touched": []
         },
         {
           "id": "5.5",
           "phase": 5,
           "status": "pending",
           "size": "medium",
-          "description": "Integrate into UserAuthenticationBackend",
-          "depends": [
-            "5.2",
-            "5.3"
-          ],
-          "acceptance": "LDAP backend integrated with main auth backend",
-          "files_touched": [
-            "src/khoj/routers/auth.py"
-          ]
+          "description": "Add path traversal validation",
+          "depends": [],
+          "acceptance": "pathlib.Path.resolve() used; path traversal test passes",
+          "files_touched": []
         }
       ]
     },
     {
       "id": 6,
-      "name": "LDAP API Endpoints",
+      "name": "Critical Cross-Platform Fixes",
       "status": "pending",
       "tasks": [
         {
@@ -361,128 +219,86 @@
           "phase": 6,
           "status": "pending",
           "size": "small",
-          "description": "Create src/khoj/routers/ldap.py",
+          "description": "Replace hardcoded /home/user with os.path.expanduser",
           "depends": [],
-          "acceptance": "LDAP router module created",
-          "files_touched": [
-            "src/khoj/routers/ldap.py"
-          ]
+          "acceptance": "grep -r '/home/user' run_code.py returns no results",
+          "files_touched": []
         },
         {
           "id": "6.2",
           "phase": 6,
           "status": "pending",
           "size": "medium",
-          "description": "GET /api/settings/ldap endpoint",
-          "depends": [
-            "6.1",
-            "3.3"
-          ],
-          "acceptance": "GET endpoint returns LDAP configuration",
-          "files_touched": [
-            "src/khoj/routers/ldap.py"
-          ]
+          "description": "Replace find command with pathlib",
+          "depends": [],
+          "acceptance": "grep -r 'find ' operator_environment_computer.py returns no results",
+          "files_touched": []
         },
         {
           "id": "6.3",
           "phase": 6,
           "status": "pending",
           "size": "medium",
-          "description": "POST /api/settings/ldap endpoint",
-          "depends": [
-            "6.2"
-          ],
-          "acceptance": "POST endpoint updates LDAP configuration",
-          "files_touched": [
-            "src/khoj/routers/ldap.py"
-          ]
+          "description": "Replace head command with pathlib",
+          "depends": [],
+          "acceptance": "grep -r 'head -n' operator_environment_computer.py returns no results",
+          "files_touched": []
         },
         {
           "id": "6.4",
           "phase": 6,
           "status": "pending",
           "size": "medium",
-          "description": "POST /api/settings/ldap/test endpoint",
-          "depends": [
-            "6.2"
-          ],
-          "acceptance": "Test endpoint validates LDAP connection",
-          "files_touched": [
-            "src/khoj/routers/ldap.py"
-          ]
+          "description": "Replace sed command with pathlib",
+          "depends": [],
+          "acceptance": "grep -r 'sed ' operator_environment_computer.py returns no results",
+          "files_touched": []
         },
         {
           "id": "6.5",
           "phase": 6,
           "status": "pending",
-          "size": "medium",
-          "description": "Rate limiting for authentication",
-          "depends": [
-            "6.4"
-          ],
-          "acceptance": "Rate limiting applied to auth endpoints",
-          "files_touched": [
-            "src/khoj/routers/ldap.py"
-          ]
+          "size": "small",
+          "description": "Fix tilde path expansion",
+          "depends": [],
+          "acceptance": "os.path.expanduser used in cli.py",
+          "files_touched": []
         },
         {
           "id": "6.6",
           "phase": 6,
           "status": "pending",
-          "size": "medium",
-          "description": "POST /auth/ldap/login endpoint",
-          "depends": [
-            "5.5",
-            "6.5"
-          ],
-          "acceptance": "LDAP login endpoint implemented",
-          "files_touched": [
-            "src/khoj/routers/ldap.py"
-          ]
-        },
-        {
-          "id": "6.7",
-          "phase": 6,
-          "status": "pending",
           "size": "small",
-          "description": "Include ldap_router in configure.py",
-          "depends": [
-            "6.6"
-          ],
-          "acceptance": "LDAP router included in app configuration",
-          "files_touched": [
-            "src/khoj/configure.py"
-          ]
+          "description": "Replace /tmp/uvicorn.sock with tempfile.gettempdir",
+          "depends": [],
+          "acceptance": "tempfile.gettempdir() used in cli.py",
+          "files_touched": []
         }
       ]
     },
     {
       "id": 7,
-      "name": "LDAP Settings UI",
+      "name": "Critical Architecture - Circular Dependencies",
       "status": "pending",
       "tasks": [
         {
           "id": "7.1",
           "phase": 7,
           "status": "pending",
-          "size": "large",
-          "description": "Create LdapConfigSection component",
+          "size": "medium",
+          "description": "Extract ai_update_memories to common/",
           "depends": [],
-          "acceptance": "LdapConfigSection React component created",
-          "files_touched": [
-            "src/interface/web/app/components/ldapConfigSection.tsx"
-          ]
+          "acceptance": "No import from khoj.routers in utils.py",
+          "files_touched": []
         },
         {
           "id": "7.2",
           "phase": 7,
           "status": "pending",
           "size": "medium",
-          "description": "Validate UI accessibility",
-          "depends": [
-            "7.1"
-          ],
-          "acceptance": "UI passes accessibility checks",
+          "description": "Extract image helpers to common/",
+          "depends": [],
+          "acceptance": "No import from khoj.routers in generate.py",
           "files_touched": []
         },
         {
@@ -490,158 +306,516 @@
           "phase": 7,
           "status": "pending",
           "size": "medium",
-          "description": "Add LDAP section to settings page",
-          "depends": [
-            "7.2",
-            "6.3"
-          ],
-          "acceptance": "LDAP configuration section visible in settings",
-          "files_touched": [
-            "src/interface/web/app/settings/page.tsx"
-          ]
-        },
-        {
-          "id": "7.4",
-          "phase": 7,
-          "status": "pending",
-          "size": "medium",
-          "description": "Create LDAP login form",
+          "description": "Extract binary agent helpers to common/",
           "depends": [],
-          "acceptance": "LDAP login form component created",
-          "files_touched": [
-            "src/interface/web/app/components/ldapLoginForm.tsx"
-          ]
-        },
-        {
-          "id": "7.5",
-          "phase": 7,
-          "status": "pending",
-          "size": "medium",
-          "description": "Integrate LDAP login into login page",
-          "depends": [
-            "7.4",
-            "6.6"
-          ],
-          "acceptance": "LDAP login option available on login page",
-          "files_touched": [
-            "src/interface/web/app/login/page.tsx"
-          ]
+          "acceptance": "No import from khoj.routers in binary agent",
+          "files_touched": []
         }
       ]
     },
     {
       "id": 8,
-      "name": "Testing, Security Review, and Documentation",
+      "name": "Critical Architecture - God Object Refactor",
       "status": "pending",
       "tasks": [
         {
           "id": "8.1",
           "phase": 8,
           "status": "pending",
-          "size": "large",
-          "description": "Create tests/test_ldap_auth.py",
+          "size": "medium",
+          "description": "Create auth_helpers.py",
           "depends": [
-            "5.5"
+            "7.1",
+            "7.2",
+            "7.3"
           ],
-          "acceptance": "LDAP authentication tests pass",
-          "files_touched": [
-            "tests/test_ldap_auth.py"
-          ]
+          "acceptance": "auth_helpers.py created; imports work",
+          "files_touched": []
         },
         {
           "id": "8.2",
           "phase": 8,
           "status": "pending",
           "size": "medium",
-          "description": "Create tests/test_ldap_config.py",
+          "description": "Create search_helpers.py",
           "depends": [
-            "6.3"
+            "7.1",
+            "7.2",
+            "7.3"
           ],
-          "acceptance": "LDAP configuration tests pass",
-          "files_touched": [
-            "tests/test_ldap_config.py"
-          ]
+          "acceptance": "search_helpers.py created; imports work",
+          "files_touched": []
         },
         {
           "id": "8.3",
           "phase": 8,
           "status": "pending",
           "size": "medium",
-          "description": "Create tests/test_anonymous_mode.py",
+          "description": "Create vector_helpers.py",
           "depends": [
-            "1.4"
+            "7.1",
+            "7.2",
+            "7.3"
           ],
-          "acceptance": "Anonymous mode tests pass",
-          "files_touched": [
-            "tests/test_anonymous_mode.py"
-          ]
+          "acceptance": "vector_helpers.py created; imports work",
+          "files_touched": []
         },
         {
           "id": "8.4",
           "phase": 8,
           "status": "pending",
-          "size": "large",
-          "description": "Security review",
+          "size": "small",
+          "description": "Update helpers.py facade",
           "depends": [
-            "5.1",
-            "6.6",
-            "7.5"
+            "8.1",
+            "8.2",
+            "8.3"
           ],
-          "acceptance": "Security review completed with no critical findings",
+          "acceptance": "All imports work",
           "files_touched": []
-        },
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Critical Architecture - Error Boundaries",
+      "status": "pending",
+      "tasks": [
         {
-          "id": "8.5",
-          "phase": 8,
+          "id": "9.1",
+          "phase": 9,
           "status": "pending",
-          "size": "medium",
-          "description": "Add LDAP documentation",
+          "size": "small",
+          "description": "Add retry to api_chat.py",
           "depends": [],
-          "acceptance": "LDAP setup and usage documented",
-          "files_touched": [
-            "documentation/docs/advanced/ldap.mdx"
-          ]
-        },
-        {
-          "id": "8.6",
-          "phase": 8,
-          "status": "pending",
-          "size": "large",
-          "description": "Create integration test",
-          "depends": [
-            "6.7",
-            "7.5"
-          ],
-          "acceptance": "End-to-end integration test passes",
-          "files_touched": [
-            "tests/test_ldap_integration.py"
-          ]
-        },
-        {
-          "id": "8.7",
-          "phase": 8,
-          "status": "pending",
-          "size": "medium",
-          "description": "Verify no email features in anonymous mode",
-          "depends": [
-            "1.1"
-          ],
-          "acceptance": "Email-dependent features disabled in anonymous mode",
+          "acceptance": "Retry decorator in api_chat.py; tests pass",
           "files_touched": []
         },
         {
-          "id": "8.8",
-          "phase": 8,
+          "id": "9.2",
+          "phase": 9,
+          "status": "pending",
+          "size": "small",
+          "description": "Add retry to api.py",
+          "depends": [],
+          "acceptance": "Retry decorator in api.py; tests pass",
+          "files_touched": []
+        },
+        {
+          "id": "9.3",
+          "phase": 9,
+          "status": "pending",
+          "size": "small",
+          "description": "Add global exception handler",
+          "depends": [],
+          "acceptance": "Error handler in main.py; tests pass",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Critical Performance Fixes",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "10.1",
+          "phase": 10,
           "status": "pending",
           "size": "medium",
-          "description": "Performance test LDAP authentication",
+          "description": "Fix N+1 query with bulk operations",
+          "depends": [],
+          "acceptance": "assert_num_queries(1) passes",
+          "files_touched": []
+        },
+        {
+          "id": "10.2",
+          "phase": 10,
+          "status": "pending",
+          "size": "small",
+          "description": "Replace time.sleep with asyncio.sleep",
+          "depends": [],
+          "acceptance": "asyncio.sleep used",
+          "files_touched": []
+        },
+        {
+          "id": "10.3",
+          "phase": 10,
+          "status": "pending",
+          "size": "small",
+          "description": "Add exc_info=True to exception handling",
+          "depends": [],
+          "acceptance": "exc_info=True in exception handlers",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Critical Documentation Fixes",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "11.1",
+          "phase": 11,
+          "status": "pending",
+          "size": "small",
+          "description": "Update migration rollback docs",
+          "depends": [],
+          "acceptance": "Docs include migrations 0103-0107",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "name": "Major Fixes - Provider Enum",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "12.1",
+          "phase": 12,
+          "status": "pending",
+          "size": "medium",
+          "description": "Replace hardcoded provider enum with configurable mapping",
+          "depends": [],
+          "acceptance": "Provider mapping configurable",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "Major Fixes - Security",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "13.1",
+          "phase": 13,
+          "status": "pending",
+          "size": "small",
+          "description": "Fix weak CSP headers",
+          "depends": [],
+          "acceptance": "CSP scan passes",
+          "files_touched": []
+        },
+        {
+          "id": "13.2",
+          "phase": 13,
+          "status": "pending",
+          "size": "medium",
+          "description": "Add webhook signature validation",
+          "depends": [],
+          "acceptance": "Webhook validation works",
+          "files_touched": []
+        },
+        {
+          "id": "13.3",
+          "phase": 13,
+          "status": "pending",
+          "size": "small",
+          "description": "Replace insecure randomness",
+          "depends": [],
+          "acceptance": "secrets module used",
+          "files_touched": []
+        },
+        {
+          "id": "13.4",
+          "phase": 13,
+          "status": "pending",
+          "size": "small",
+          "description": "Fix logging of sensitive data",
+          "depends": [],
+          "acceptance": "No PII in logs",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "name": "Major Fixes - Cross-Platform",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "14.1",
+          "phase": 14,
+          "status": "pending",
+          "size": "small",
+          "description": "Fix remaining shell=True",
+          "depends": [],
+          "acceptance": "shell=False used",
+          "files_touched": []
+        },
+        {
+          "id": "14.2",
+          "phase": 14,
+          "status": "pending",
+          "size": "small",
+          "description": "Fix hardcoded linux",
+          "depends": [],
+          "acceptance": "platform.system() used",
+          "files_touched": []
+        },
+        {
+          "id": "14.3",
+          "phase": 14,
+          "status": "pending",
+          "size": "small",
+          "description": "Add Windows CLI docs",
+          "depends": [],
+          "acceptance": "Windows docs added",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "name": "Major Fixes - Documentation",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "15.1",
+          "phase": 15,
+          "status": "pending",
+          "size": "small",
+          "description": "Add deprecation timeline",
+          "depends": [],
+          "acceptance": "Deprecation timeline documented",
+          "files_touched": []
+        },
+        {
+          "id": "15.2",
+          "phase": 15,
+          "status": "pending",
+          "size": "small",
+          "description": "Fix misleading TODOs",
+          "depends": [],
+          "acceptance": "TODOs fixed",
+          "files_touched": []
+        },
+        {
+          "id": "15.3",
+          "phase": 15,
+          "status": "pending",
+          "size": "medium",
+          "description": "Implement Notion databases",
+          "depends": [],
+          "acceptance": "Notion databases handled",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "name": "Major Fixes - Code Quality",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "16.1",
+          "phase": 16,
+          "status": "pending",
+          "size": "medium",
+          "description": "Refactor boilerplate",
+          "depends": [],
+          "acceptance": "Boilerplate extracted",
+          "files_touched": []
+        },
+        {
+          "id": "16.2",
+          "phase": 16,
+          "status": "pending",
+          "size": "small",
+          "description": "Simplify wrappers",
+          "depends": [],
+          "acceptance": "Wrapper functions simplified",
+          "files_touched": []
+        },
+        {
+          "id": "16.3",
+          "phase": 16,
+          "status": "pending",
+          "size": "small",
+          "description": "Deduplicate code",
+          "depends": [],
+          "acceptance": "Code deduplicated",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "name": "Major Fixes - Tech Debt",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "17.1",
+          "phase": 17,
+          "status": "pending",
+          "size": "medium",
+          "description": "Extract hardcoded config",
+          "depends": [],
+          "acceptance": "Config externalized",
+          "files_touched": []
+        },
+        {
+          "id": "17.2",
+          "phase": 17,
+          "status": "pending",
+          "size": "medium",
+          "description": "Add auth tests",
+          "depends": [],
+          "acceptance": "Auth tests pass",
+          "files_touched": []
+        },
+        {
+          "id": "17.3",
+          "phase": 17,
+          "status": "pending",
+          "size": "medium",
+          "description": "Add memory tests",
+          "depends": [],
+          "acceptance": "Memory tests pass",
+          "files_touched": []
+        },
+        {
+          "id": "17.4",
+          "phase": 17,
+          "status": "pending",
+          "size": "medium",
+          "description": "Add search tests",
+          "depends": [],
+          "acceptance": "Search tests pass",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "name": "Major Fixes - Performance",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "18.1",
+          "phase": 18,
+          "status": "pending",
+          "size": "large",
+          "description": "Add type annotations",
+          "depends": [],
+          "acceptance": "mypy passes",
+          "files_touched": []
+        },
+        {
+          "id": "18.2",
+          "phase": 18,
+          "status": "pending",
+          "size": "medium",
+          "description": "Add caching",
+          "depends": [],
+          "acceptance": "Cache implemented",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "name": "Feature Implementation",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "19.1",
+          "phase": 19,
+          "status": "pending",
+          "size": "medium",
+          "description": "Implement query_images",
+          "depends": [],
+          "acceptance": "query_images implemented",
+          "files_touched": []
+        },
+        {
+          "id": "19.2",
+          "phase": 19,
+          "status": "pending",
+          "size": "medium",
+          "description": "Implement query_files",
+          "depends": [],
+          "acceptance": "query_files implemented",
+          "files_touched": []
+        },
+        {
+          "id": "19.3",
+          "phase": 19,
+          "status": "pending",
+          "size": "medium",
+          "description": "Implement relevant_memories",
+          "depends": [],
+          "acceptance": "relevant_memories implemented",
+          "files_touched": []
+        },
+        {
+          "id": "19.4",
+          "phase": 19,
+          "status": "pending",
+          "size": "small",
+          "description": "Configure operator agents",
+          "depends": [],
+          "acceptance": "Agents configured",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "name": "Minor Enhancements",
+      "status": "completed",
+      "tasks": [
+        {
+          "id": "20.1",
+          "phase": 20,
+          "status": "pending",
+          "size": "small",
+          "description": "Fix remaining minor issues",
+          "depends": [],
+          "acceptance": "Minor issues resolved",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "name": "Critic Gate Review",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "21.1",
+          "phase": 21,
+          "status": "pending",
+          "size": "medium",
+          "description": "Submit plan to Critic for final approval",
+          "depends": [],
+          "acceptance": "Critic returns APPROVED",
+          "files_touched": []
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "name": "User Presentation",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "22.1",
+          "phase": 22,
+          "status": "pending",
+          "size": "medium",
+          "description": "Present findings and plan to user",
           "depends": [
-            "5.5"
+            "21.1"
           ],
-          "acceptance": "LDAP auth performance meets requirements",
+          "acceptance": "User approves plan",
           "files_touched": []
         }
       ]
     }
-  ]
+  ],
+  "migration_status": "native"
 }

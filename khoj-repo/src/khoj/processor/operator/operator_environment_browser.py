@@ -11,7 +11,7 @@ from khoj.processor.operator.operator_environment_base import (
     EnvState,
     EnvStepResult,
 )
-from khoj.utils.helpers import convert_image_to_webp
+from khoj.utils.helpers import convert_image_to_webp, redact_sensitive_data
 
 logger = logging.getLogger(__name__)
 
@@ -90,37 +90,19 @@ class BrowserEnvironment(Environment):
         await self.page.set_viewport_size({"width": self.width, "height": self.height})
         logger.info("Browser environment started.")
 
-    async def _get_screenshot(self) -> Optional[str]:
+    async def _get_screenshot_bytes(self) -> Optional[bytes]:
+        """Get raw screenshot as bytes from the browser environment."""
         if not self.page or self.page.is_closed():
             return None
         try:
-            screenshot_bytes = await self.page.screenshot(caret="initial", full_page=False, type="png")
-            # Draw mouse position on the screenshot image
-            if self.mouse_pos:
-                screenshot_bytes = await self._draw_mouse_position(screenshot_bytes, self.mouse_pos)
-            screenshot_webp_bytes = convert_image_to_webp(screenshot_bytes)
-            return base64.b64encode(screenshot_webp_bytes).decode("utf-8")
+            return await self.page.screenshot(caret="initial", full_page=False, type="png")
         except Exception as e:
-            logger.error(f"Failed to get screenshot: {e}")
+            logger.error(f"Failed to get screenshot bytes: {e}")
             return None
 
-    async def _draw_mouse_position(self, screenshot_bytes: bytes, mouse_pos: Point) -> bytes:
-        from PIL import Image, ImageDraw
-
-        # Load the screenshot into a PIL image
-        image = Image.open(io.BytesIO(screenshot_bytes))
-
-        # Draw a red circle at the mouse position
-        draw = ImageDraw.Draw(image)
-        radius = 5
-        draw.ellipse(
-            (mouse_pos.x - radius, mouse_pos.y - radius, mouse_pos.x + radius, mouse_pos.y + radius), fill="red"
-        )
-
-        # Save the modified image to a bytes buffer
-        output_buffer = io.BytesIO()
-        image.save(output_buffer, format="PNG")
-        return output_buffer.getvalue()
+    def _get_mouse_position(self) -> Optional[Point]:
+        """Get current mouse position from the browser environment."""
+        return self.mouse_pos
 
     async def get_state(self) -> EnvState:
         if not self.page or self.page.is_closed():
@@ -219,13 +201,13 @@ class BrowserEnvironment(Environment):
                         error = "Keypress action requires at least one key"
                         key_string = "N/A"
                     output = f"Pressed key(s): {key_string}"
-                    logger.debug(f"Action: {action.type} '{key_string}'")
+                    logger.debug(f"Action: {action.type} '{redact_sensitive_data(key_string)}'")
 
                 case "type":
                     text = action.text
                     await self.page.keyboard.type(text)
                     output = f"Typed text: {text}"
-                    logger.debug(f"Action: {action.type} '{text}'")
+                    logger.debug(f"Action: {action.type} '{redact_sensitive_data(text)}'")
 
                 case "wait":
                     duration = action.duration
@@ -281,19 +263,19 @@ class BrowserEnvironment(Environment):
                     for key in reversed(keys):
                         await self.page.keyboard.up(key)
                     output = f"Held key{'s' if len(keys) > 1 else ''} {keys_to_parse} for {duration} seconds"
-                    logger.debug(f"Action: {action.type} '{keys_to_parse}' for {duration}s")
+                    logger.debug(f"Action: {action.type} '{redact_sensitive_data(keys_to_parse)}' for {duration}s")
 
                 case "key_down":
                     key = action.key
                     await self.page.keyboard.down(key)
                     output = f"Key down: {key}"
-                    logger.debug(f"Action: {action.type} {key}")
+                    logger.debug(f"Action: {action.type} {redact_sensitive_data(key)}")
 
                 case "key_up":
                     key = action.key
                     await self.page.keyboard.up(key)
                     output = f"Key up: {key}"
-                    logger.debug(f"Action: {action.type} {key}")
+                    logger.debug(f"Action: {action.type} {redact_sensitive_data(key)}")
 
                 case "cursor_position":
                     # Playwright doesn't directly expose mouse position easily without JS injection

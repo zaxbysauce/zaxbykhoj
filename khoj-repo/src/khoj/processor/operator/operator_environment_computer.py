@@ -1,13 +1,12 @@
 import ast
 import asyncio
 import base64
-import io
 import logging
 import platform
+import shlex
 import subprocess
+from pathlib import Path
 from typing import Literal, Optional, Union
-
-from PIL import Image, ImageDraw
 
 from khoj.processor.operator.operator_actions import DragAction, OperatorAction, Point
 from khoj.processor.operator.operator_environment_base import (
@@ -15,7 +14,7 @@ from khoj.processor.operator.operator_environment_base import (
     EnvState,
     EnvStepResult,
 )
-from khoj.utils.helpers import convert_image_to_webp
+from khoj.utils.helpers import redact_sensitive_data
 
 logger = logging.getLogger(__name__)
 
@@ -102,46 +101,20 @@ class ComputerEnvironment(Environment):
             f"Initial mouse position: ({self.mouse_pos.x},{self.mouse_pos.y})"
         )
 
-    async def _get_screenshot(self) -> Optional[str]:
+    async def _get_screenshot_bytes(self) -> Optional[bytes]:
+        """Get raw screenshot as bytes from the computer environment."""
         try:
-            # Get screenshot
             base64_png_str = await self._execute("screenshot")
-            screenshot_bytes = base64.b64decode(base64_png_str)
-
-            # Get current mouse position
-            current_mouse_x, current_mouse_y = await self._execute("position")
-            draw_pos = Point(x=current_mouse_x, y=current_mouse_y)
-
-            # Add mouse position to screenshot
-            screenshot_bytes_with_mouse = await self._draw_mouse_position(screenshot_bytes, draw_pos)
-            screenshot_webp_bytes = convert_image_to_webp(screenshot_bytes_with_mouse)
-            return base64.b64encode(screenshot_webp_bytes).decode("utf-8")
+            return base64.b64decode(base64_png_str)
         except KeyboardInterrupt:  # Propagate keyboard interrupts
             raise
         except Exception as e:
-            logger.error(f"Failed to get screenshot: {e}", exc_info=True)
+            logger.error(f"Failed to get screenshot bytes: {e}", exc_info=True)
             return None
 
-    async def _draw_mouse_position(self, screenshot_bytes: bytes, mouse_pos: Point) -> bytes:
-        if Image is None or ImageDraw is None:
-            return screenshot_bytes
-        try:
-            image = Image.open(io.BytesIO(screenshot_bytes))
-            draw = ImageDraw.Draw(image)
-            radius = 8
-            # Red circle with black border for better visibility
-            draw.ellipse(
-                (mouse_pos.x - radius, mouse_pos.y - radius, mouse_pos.x + radius, mouse_pos.y + radius),
-                outline="black",
-                fill="red",
-                width=2,
-            )
-            output_buffer = io.BytesIO()
-            image.save(output_buffer, format="PNG")
-            return output_buffer.getvalue()
-        except Exception as e:
-            logger.error(f"Failed to draw mouse position: {e}")
-            return screenshot_bytes
+    def _get_mouse_position(self) -> Optional[Point]:
+        """Get current mouse position from the computer environment."""
+        return self.mouse_pos
 
     async def get_state(self) -> EnvState:
         screenshot = await self._get_screenshot()
@@ -243,13 +216,13 @@ class ComputerEnvironment(Environment):
                         key_string = mapped_keys[0]
                     if not error:
                         output = f"Pressed key(s): {key_string}"
-                    logger.debug(f"Action: {action.type} '{key_string}'")
+                    logger.debug(f"Action: {action.type} '{redact_sensitive_data(key_string)}'")
 
                 case "type":
                     text_to_type = action.text
                     await self._execute("typewrite", text_to_type, interval=0.02)  # Small interval
                     output = f"Typed text: {text_to_type}"
-                    logger.debug(f"Action: {action.type} '{text_to_type}'")
+                    logger.debug(f"Action: {action.type} '{redact_sensitive_data(text_to_type)}'")
 
                 case "wait":
                     duration = action.duration
@@ -314,19 +287,19 @@ class ComputerEnvironment(Environment):
                         output = (
                             f"Held key{'s' if len(parsed_keys) > 1 else ''} {keys_to_hold_str} for {duration} seconds"
                         )
-                        logger.debug(f"Action: {action.type} '{keys_to_hold_str}' for {duration}s")
+                        logger.debug(f"Action: {action.type} '{redact_sensitive_data(keys_to_hold_str)}' for {duration}s")
 
                 case "key_down":
                     key_to_press = self.CUA_KEY_TO_PYAUTOGUI_KEY.get(action.key.lower(), action.key)
                     await self._execute("keyDown", key_to_press)
                     output = f"Key down: {key_to_press}"
-                    logger.debug(f"Action: {action.type} {key_to_press}")
+                    logger.debug(f"Action: {action.type} {redact_sensitive_data(key_to_press)}")
 
                 case "key_up":
                     key_to_release = self.CUA_KEY_TO_PYAUTOGUI_KEY.get(action.key.lower(), action.key)
                     await self._execute("keyUp", key_to_release)
                     output = f"Key up: {key_to_release}"
-                    logger.debug(f"Action: {action.type} {key_to_release}")
+                    logger.debug(f"Action: {action.type} {redact_sensitive_data(key_to_release)}")
 
                 case "cursor_position":
                     pos_x, pos_y = await self._execute("position")
@@ -349,7 +322,7 @@ class ComputerEnvironment(Environment):
                         output = f"Command executed successfully:\n{result['output']}"
                     else:
                         error = f"Command execution failed: {result['error']}"
-                    logger.debug(f"Action: {action.type} with command '{action.command}'")
+                    logger.debug(f"Action: {action.type} with command '{redact_sensitive_data(action.command)}'")
 
                 case "text_editor_view":
                     # View file contents
@@ -358,20 +331,25 @@ class ComputerEnvironment(Environment):
                     # Type guard: path should be str for text editor actions
                     if not isinstance(file_path, str):
                         raise TypeError("Invalid path type for text editor view action")
-                    escaped_path = file_path.replace("'", "'\"'\"'")
-                    is_dir = await self._execute("os.path.isdir", escaped_path)
-                    if is_dir:
-                        cmd = rf"find {escaped_path} -maxdepth 2 -not -path '*/\.*'"
-                    elif view_range:
-                        # Use head/tail to view specific line range
-                        start_line, end_line = view_range
-                        lines_to_show = end_line - start_line + 1
-                        cmd = f"head -n {end_line} '{escaped_path}' | tail -n {lines_to_show}"
-                    else:
-                        # View entire file
-                        cmd = f"cat '{escaped_path}'"
-
-                    result = await self._execute_shell_command(cmd)
+                    path = Path(file_path)
+                    is_dir = path.is_dir()
+                    try:
+                        if is_dir:
+                            # Use pathlib to list files up to 2 levels deep, excluding hidden items
+                            files = [p for p in path.iterdir() if not p.name.startswith('.')][:2]  # maxdepth 2
+                            output_str = '\n'.join(str(p) for p in files)
+                        elif view_range:
+                            # Use pathlib to read specific line range
+                            start_line, end_line = view_range
+                            lines_to_show = end_line - start_line + 1
+                            lines = path.read_text(encoding='utf-8').splitlines()[start_line-1:end_line]
+                            output_str = '\n'.join(lines[-lines_to_show:])
+                        else:
+                            # View entire file
+                            output_str = path.read_text(encoding='utf-8')
+                        result = {"success": True, "output": output_str, "error": None}
+                    except Exception as e:
+                        result = {"success": False, "output": "", "error": str(e)}
                     MAX_OUTPUT_LENGTH = 15000  # Limit output length to avoid excessive data
                     if len(result["output"]) > MAX_OUTPUT_LENGTH:
                         result["output"] = f"{result['output'][:MAX_OUTPUT_LENGTH]}..."
@@ -412,27 +390,16 @@ class ComputerEnvironment(Environment):
 
                     # Type guard: path should be str for text editor actions
                     if not isinstance(file_path, str):
-                        raise TypeError("Invalid path type for text editor str_replace action")
-                    # Use sed for string replacement, escaping special characters
-                    escaped_path = file_path.replace("'", "'\"'\"'")
-                    escaped_old = (
-                        old_str.replace("\t", "    ")
-                        .replace("\\", "\\\\")
-                        .replace("\n", "\\n")
-                        .replace("/", "\\/")
-                        .replace("'", "'\"'\"'")
-                    )
-                    escaped_new = (
-                        new_str.replace("\t", "    ")
-                        .replace("\\", "\\\\")
-                        .replace("\n", "\\n")
-                        .replace("&", "\\&")
-                        .replace("/", "\\/")
-                        .replace("'", "'\"'\"'")
-                    )
-                    cmd = f"sed -i.bak 's/{escaped_old}/{escaped_new}/g' '{escaped_path}'"
-
-                    result = await self._execute_shell_command(cmd)
+                        raise TypeError("Invalid path type for text_editor_str_replace action")
+                    # Use pathlib for string replacement
+                    try:
+                        path = Path(file_path)
+                        content = path.read_text(encoding='utf-8')
+                        new_content = content.replace(old_str, new_str)
+                        path.write_text(new_content, encoding='utf-8')
+                        result = {"success": True, "output": "Replacement done", "error": None}
+                    except Exception as e:
+                        result = {"success": False, "output": "", "error": str(e)}
                     if result["success"]:
                         output = f"Replaced '{old_str[:50]}...' with '{new_str[:50]}...' in {file_path}"
                     else:
@@ -447,19 +414,16 @@ class ComputerEnvironment(Environment):
 
                     # Type guard: path should be str for text editor actions
                     if not isinstance(file_path, str):
-                        error = "Invalid path type for text editor insert action.\n"
-                        error += f"Failed to insert text in {file_path}: {result['error']}"
-                        raise TypeError(error)
-                    escaped_path = file_path.replace("'", "'\"'\"'")
-                    escaped_content = (
-                        new_str.replace("\t", "    ")
-                        .replace("\\", "\\\\")
-                        .replace("'", "'\"'\"'")
-                        .replace("\n", "\\\n")
-                    )
-                    cmd = f"sed -i.bak '{insert_line}a\\{escaped_content}' '{escaped_path}'"
-
-                    result = await self._execute_shell_command(cmd)
+                        raise TypeError("Invalid path type for text_editor_insert action")
+                    # Use pathlib for line insertion
+                    try:
+                        path = Path(file_path)
+                        lines = path.read_text(encoding='utf-8').splitlines()
+                        lines.insert(insert_line - 1, new_str)
+                        path.write_text('\n'.join(lines), encoding='utf-8')
+                        result = {"success": True, "output": "Insertion done", "error": None}
+                    except Exception as e:
+                        result = {"success": False, "output": "", "error": str(e)}
                     if result["success"]:
                         output = f"Inserted text after line {insert_line} in {file_path}"
                     else:
@@ -516,10 +480,11 @@ class ComputerEnvironment(Environment):
                 )
             else:
                 # Execute command locally
+                command_list = shlex.split(command)
                 process = await asyncio.to_thread(
                     subprocess.run,
-                    command,
-                    shell=True,
+                    command_list,
+                    shell=False,
                     capture_output=True,
                     text=True,
                     check=False,
@@ -625,16 +590,16 @@ class ComputerEnvironment(Environment):
             return None
 
         safe_python_cmd = python_command_str.replace('"', '\\"')
-        docker_full_cmd = (
-            f'docker exec -e DISPLAY={self.docker_display} "{self.docker_container_name}" '
-            f'python3 -c "{safe_python_cmd}"'
-        )
+        docker_full_cmd = [
+            "docker", "exec", "-e", f"DISPLAY={self.docker_display}",
+            self.docker_container_name, "python3", "-c", safe_python_cmd
+        ]
 
         try:
             process = await asyncio.to_thread(
                 subprocess.run,
                 docker_full_cmd,
-                shell=True,
+                shell=False,
                 capture_output=True,
                 text=True,
                 check=False,  # We check returncode manually

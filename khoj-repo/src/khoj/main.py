@@ -16,6 +16,7 @@ import warnings
 from importlib.metadata import version
 
 from khoj.utils.helpers import in_debug_mode, is_env_var_true
+from khoj.utils.config import TimeoutConfig
 
 # Ignore non-actionable warnings
 warnings.filterwarnings("ignore", message=r"snapshot_download.py has been made private", category=FutureWarning)
@@ -26,9 +27,11 @@ warnings.filterwarnings("ignore", message=r"Warning: Empty content on page \d+ o
 import uvicorn
 import django
 from apscheduler.schedulers.background import BackgroundScheduler
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+import httpx
 import schedule
 
 from django.core.asgi import get_asgi_application
@@ -62,6 +65,43 @@ if in_debug_mode():
     app = FastAPI(debug=True)
 else:
     app = FastAPI(docs_url=None)  # Disable Swagger UI in production
+
+
+# Global Exception Handler Middleware
+@app.exception_handler(httpx.ConnectError)
+async def connect_error_handler(request: Request, exc: httpx.ConnectError):
+    logger.error(f"Connection error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Service unavailable: Unable to connect to external service"}
+    )
+
+
+@app.exception_handler(httpx.TimeoutException)
+async def timeout_error_handler(request: Request, exc: httpx.TimeoutException):
+    logger.error(f"Timeout error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Service unavailable: Request timed out"}
+    )
+
+
+@app.exception_handler(httpx.NetworkError)
+async def network_error_handler(request: Request, exc: httpx.NetworkError):
+    logger.error(f"Network error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "Service unavailable: Network error occurred"}
+    )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
 
 # Get Django Application
 django_app = get_asgi_application()
@@ -225,8 +265,8 @@ def start_server(app, host=None, port=None, socket=None):
             log_level="debug" if state.verbose > 1 else "info",
             use_colors=True,
             log_config=None,
-            ws_ping_timeout=300,
-            timeout_keep_alive=60,
+            ws_ping_timeout=TimeoutConfig.WS_PING_TIMEOUT,
+            timeout_keep_alive=TimeoutConfig.WS_KEEP_ALIVE,
         )
     else:
         uvicorn.run(
@@ -236,8 +276,8 @@ def start_server(app, host=None, port=None, socket=None):
             log_level="debug" if state.verbose > 1 else "info",
             use_colors=True,
             log_config=None,
-            ws_ping_timeout=300,
-            timeout_keep_alive=60,
+            ws_ping_timeout=TimeoutConfig.WS_PING_TIMEOUT,
+            timeout_keep_alive=TimeoutConfig.WS_KEEP_ALIVE,
             **state.ssl_config if state.ssl_config else {},
         )
     logger.info("🌒 Stopping Khoj")

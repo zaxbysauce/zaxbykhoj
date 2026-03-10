@@ -17,7 +17,7 @@ from khoj.database.models import (
     UserMemory,
     WebScraper,
 )
-from khoj.routers.helpers import (
+from khoj.common.operator_helpers import (
     ChatEvent,
     extract_relevant_info,
     generate_online_subqueries,
@@ -31,6 +31,7 @@ from khoj.utils.helpers import (
     timer,
 )
 from khoj.utils.rawconfig import LocationData
+from khoj.utils.config import ApiUrlConfig, TimeoutConfig
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ GOOGLE_SEARCH_API_KEY = os.getenv("GOOGLE_SEARCH_API_KEY")
 GOOGLE_SEARCH_ENGINE_ID = os.getenv("GOOGLE_SEARCH_ENGINE_ID")
 # Serper Dev API configurations
 SERPER_DEV_API_KEY = os.getenv("SERPER_DEV_API_KEY")
-SERPER_DEV_URL = "https://google.serper.dev/search"
+SERPER_DEV_URL = os.getenv("SERPER_DEV_URL", ApiUrlConfig.SERPER_DEV_URL)
 # Firecrawl API configurations
 FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
 # SearXNG API configurations
@@ -50,7 +51,7 @@ EXA_API_KEY = os.getenv("EXA_API_KEY")
 # Whether to automatically read web pages from search results
 AUTO_READ_WEBPAGE = is_env_var_true("KHOJ_AUTO_READ_WEBPAGE")
 # Timeout for web search and webpage read HTTP requests
-WEBPAGE_REQUEST_TIMEOUT = 60  # seconds
+WEBPAGE_REQUEST_TIMEOUT = TimeoutConfig.WEBPAGE_REQUEST_TIMEOUT  # seconds
 
 
 async def search_online(

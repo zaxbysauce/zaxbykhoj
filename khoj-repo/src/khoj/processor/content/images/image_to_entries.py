@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 from khoj.database.models import Entry as DbEntry
@@ -10,6 +11,17 @@ from khoj.utils.helpers import timer
 from khoj.utils.rawconfig import Entry
 
 logger = logging.getLogger(__name__)
+
+
+def validate_path(base_dir: Path, user_path: str) -> Path:
+    """Validate that user_path is within base_dir to prevent path traversal."""
+    user_path_obj = Path(user_path)
+    if user_path_obj.is_absolute():
+        raise ValueError(f"Absolute paths not allowed: {user_path}")
+    resolved = (base_dir / user_path).resolve()
+    if not str(resolved).startswith(str(base_dir.resolve())):
+        raise ValueError(f"Path traversal attempt detected: {user_path}")
+    return resolved
 
 
 class ImageToEntries(TextToEntries):
@@ -68,7 +80,9 @@ class ImageToEntries(TextToEntries):
                     tmp_file = f"tmp_image_file_{timestamp_now}.webp"
                 else:
                     continue
-                with open(tmp_file, "wb") as f:
+                # Validate temp file path to prevent path traversal
+                validated_tmp_file = validate_path(Path.cwd(), tmp_file)
+                with open(validated_tmp_file, "wb") as f:
                     bytes = image_files[image_file]
                     f.write(bytes)
                 try:
@@ -76,7 +90,7 @@ class ImageToEntries(TextToEntries):
 
                     loader = RapidOCR()
                     image_entries_per_file = ""
-                    result, _ = loader(tmp_file)
+                    result, _ = loader(validated_tmp_file)
                     if result:
                         expanded_entries = [text[1] for text in result]
                         image_entries_per_file = " ".join(expanded_entries)
@@ -92,8 +106,8 @@ class ImageToEntries(TextToEntries):
                 logger.warning(f"Unable to process file: {image_file}. This file will not be indexed.")
                 logger.warning(e, exc_info=True)
             finally:
-                if tmp_file and os.path.exists(tmp_file):
-                    os.remove(tmp_file)
+                if validated_tmp_file and os.path.exists(validated_tmp_file):
+                    os.remove(validated_tmp_file)
         return file_to_text_map, ImageToEntries.convert_image_entries_to_maps(entries, dict(entry_to_location_map))
 
     @staticmethod

@@ -9,6 +9,7 @@ from khoj.database.models import KhojUser, NotionConfig
 from khoj.processor.content.text_to_entries import TextToEntries
 from khoj.utils.helpers import timer
 from khoj.utils.rawconfig import Entry, NotionContentConfig
+from khoj.utils.config import ApiUrlConfig
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +89,7 @@ class NotionToEntries(TextToEntries):
 
             while True:
                 result = self.session.post(
-                    "https://api.notion.com/v1/search",
+                    ApiUrlConfig.NOTION_API_URL + "/search",
                     json=self.body_params,
                 ).json()
                 responses.append(result)
@@ -105,8 +106,8 @@ class NotionToEntries(TextToEntries):
                 for p_or_d in pages_or_databases:
                     with timer(f"Processing {p_or_d['object']} {p_or_d['id']}", logger=logger):
                         if p_or_d["object"] == "database":
-                            # TODO: Handle databases
-                            continue
+                            db_entries = self.process_database(p_or_d)
+                            current_entries.extend(db_entries)
                         elif p_or_d["object"] == "page":
                             page_entries = self.process_page(p_or_d)
                             current_entries.extend(page_entries)
@@ -173,6 +174,215 @@ class NotionToEntries(TextToEntries):
                 )
         return current_entries
 
+    def process_database(self, database):
+        """Process a Notion database by querying all its rows and processing each as a page."""
+        database_id = database["id"]
+        current_entries = []
+
+        # Get database metadata to understand its schema
+        db_metadata = self.get_database(database_id)
+        if not db_metadata:
+            logger.warning(f"Could not get metadata for database {database_id}")
+            return current_entries
+
+        # Query all rows in the database
+        query_params = {"page_size": 100}
+        while True:
+            result = self.session.post(
+                f"{ApiUrlConfig.NOTION_API_URL}/databases/{database_id}/query",
+                json=query_params,
+            ).json()
+            
+            rows = result.get("results", [])
+            for row in rows:
+                row_entries = self.process_database_row(row, db_metadata)
+                current_entries.extend(row_entries)
+
+            if not result.get("has_more", False):
+                break
+            query_params.update({"start_cursor": result["next_cursor"]})
+
+        return current_entries
+
+    def get_database(self, database_id):
+        """Get database metadata from Notion API."""
+        try:
+            return self.session.get(f"ApiUrlConfig.NOTION_API_URL/v1/databases/{database_id}").json()
+        except Exception as e:
+            logger.error(f"Error getting database {database_id}: {e}")
+            return None
+
+    def process_database_row(self, row, db_metadata):
+        """Process a single row (page) from a Notion database."""
+        row_id = row["id"]
+        
+        # Get the title from the database's title property
+        title = self.extract_database_title(row, db_metadata)
+        
+        # Get the page content (children blocks)
+        content = self.get_page_children(row_id)
+
+        if title is None:
+            title = f"Database Entry {row_id[:8]}"
+
+        current_entries = []
+        curr_heading = ""
+        
+        for block in content.get("results", []):
+            block_type = block.get("type")
+
+            if block_type is None:
+                continue
+            block_data = block[block_type]
+
+            if block_data.get("rich_text") is None or len(block_data["rich_text"]) == 0:
+                continue
+
+            raw_content = ""
+            if block_type in ["heading_1", "heading_2", "heading_3"]:
+                if raw_content != "":
+                    current_entries.append(
+                        Entry(
+                            compiled=raw_content,
+                            raw=raw_content,
+                            heading=title,
+                            file=row.get("url", ""),
+                        )
+                    )
+                curr_heading = block_data["rich_text"][0]["plain_text"]
+            else:
+                if curr_heading != "":
+                    raw_content = self.process_heading(curr_heading)
+            for text in block_data["rich_text"]:
+                raw_content += self.process_text(text)
+
+            if block.get("has_children", True):
+                raw_content += "\n"
+                raw_content = self.process_nested_children(
+                    self.get_block_children(block["id"]), raw_content, block_type
+                )
+
+            if raw_content != "":
+                current_entries.append(
+                    Entry(
+                        compiled=raw_content,
+                        raw=raw_content,
+                        heading=title,
+                        file=row.get("url", ""),
+                    )
+                )
+
+        # If no content blocks, at least include the properties as entry
+        if len(current_entries) == 0:
+            properties_text = self.format_database_properties(row, db_metadata)
+            if properties_text:
+                current_entries.append(
+                    Entry(
+                        compiled=properties_text,
+                        raw=properties_text,
+                        heading=title,
+                        file=row.get("url", ""),
+                    )
+                )
+
+        return current_entries
+
+    def extract_database_title(self, row, db_metadata):
+        """Extract title from a database row based on the database schema."""
+        properties = db_metadata.get("properties", {})
+        
+        # Find the title property in the database schema
+        title_property_name = None
+        for prop_name, prop_data in properties.items():
+            if prop_data.get("type") == "title":
+                title_property_name = prop_name
+                break
+        
+        if not title_property_name:
+            return None
+
+        # Get the title value from the row's properties
+        row_properties = row.get("properties", {})
+        if title_property_name not in row_properties:
+            return None
+
+        title_prop = row_properties[title_property_name]
+        if title_prop.get("type") != "title":
+            return None
+
+        title_rich_text = title_prop.get("title", [])
+        if len(title_rich_text) == 0:
+            return None
+
+        return title_rich_text[0].get("plain_text", None)
+
+    def format_database_properties(self, row, db_metadata):
+        """Format database row properties as text for indexing."""
+        properties = row.get("properties", {})
+        formatted_parts = []
+
+        for prop_name, prop_data in properties.items():
+            prop_type = prop_data.get("type")
+            value = self.format_property_value(prop_type, prop_data)
+            if value:
+                formatted_parts.append(f"{prop_name}: {value}")
+
+        if formatted_parts:
+            return "\n".join(formatted_parts)
+        return None
+
+    def format_property_value(self, prop_type, prop_data):
+        """Format a single property value based on its type."""
+        if prop_type == "title":
+            rich_text = prop_data.get("title", [])
+            return " ".join([t.get("plain_text", "") for t in rich_text])
+        elif prop_type == "rich_text":
+            rich_text = prop_data.get("rich_text", [])
+            return " ".join([t.get("plain_text", "") for t in rich_text])
+        elif prop_type == "select":
+            select_data = prop_data.get("select")
+            return select_data.get("name", "") if select_data else ""
+        elif prop_type == "multi_select":
+            multi_select = prop_data.get("multi_select", [])
+            return ", ".join([s.get("name", "") for s in multi_select])
+        elif prop_type == "date":
+            date_data = prop_data.get("date")
+            return date_data.get("start", "") if date_data else ""
+        elif prop_type == "checkbox":
+            return "Yes" if prop_data.get("checkbox", False) else "No"
+        elif prop_type == "number":
+            return str(prop_data.get("number", ""))
+        elif prop_type == "url":
+            return prop_data.get("url", "")
+        elif prop_type == "email":
+            return prop_data.get("email", "")
+        elif prop_type == "phone_number":
+            return prop_data.get("phone_number", "")
+        elif prop_type == "people":
+            people = prop_data.get("people", [])
+            return ", ".join([p.get("name", "") for p in people])
+        elif prop_type == "relation":
+            relations = prop_data.get("relation", [])
+            return ", ".join([r.get("id", "") for r in relations])
+        elif prop_type == "rollup":
+            return "..."
+        elif prop_type == "formula":
+            return "..."
+        elif prop_type == "created_time":
+            return prop_data.get("created_time", "")
+        elif prop_type == "last_edited_time":
+            return prop_data.get("last_edited_time", "")
+        elif prop_type == "created_by":
+            created_by = prop_data.get("created_by", {})
+            return created_by.get("name", "")
+        elif prop_type == "last_edited_by":
+            edited_by = prop_data.get("last_edited_by", {})
+            return edited_by.get("name", "")
+        elif prop_type == "files":
+            files = prop_data.get("files", [])
+            return ", ".join([f.get("name", "") for f in files])
+        return ""
+
     def process_heading(self, heading):
         return f"\n<b>{heading}</b>\n"
 
@@ -204,16 +414,16 @@ class NotionToEntries(TextToEntries):
 
     def get_block_children(self, block_id):
         try:
-            return self.session.get(f"https://api.notion.com/v1/blocks/{block_id}/children").json()
+            return self.session.get(f"ApiUrlConfig.NOTION_API_URL/v1/blocks/{block_id}/children").json()
         except Exception as e:
             logger.error(f"Error getting children for block {block_id}: {e}")
             return {}
 
     def get_page(self, page_id):
-        return self.session.get(f"https://api.notion.com/v1/pages/{page_id}").json()
+        return self.session.get(f"ApiUrlConfig.NOTION_API_URL/v1/pages/{page_id}").json()
 
     def get_page_children(self, page_id):
-        return self.session.get(f"https://api.notion.com/v1/blocks/{page_id}/children").json()
+        return self.session.get(f"ApiUrlConfig.NOTION_API_URL/v1/blocks/{page_id}/children").json()
 
     def get_page_content(self, page_id):
         try:

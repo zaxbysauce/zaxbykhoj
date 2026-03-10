@@ -139,7 +139,7 @@ python -m pip install 'khoj[local]'
        ```shell
  # Install Khoj
  py -m pip install 'khoj[local]'
-      ```
+       ```
         </TabItem>
         <TabItem value="nvidia" label="NVIDIA (CUDA) GPU">
        ```shell
@@ -147,7 +147,7 @@ python -m pip install 'khoj[local]'
  $env:CMAKE_ARGS = "-DGGML_CUDA=on"
  # 2. Install Khoj
  py -m pip install 'khoj[local]'
-      ```
+       ```
         </TabItem>
         <TabItem value="amd" label="AMD (ROCm) GPU">
        ```shell
@@ -155,7 +155,7 @@ python -m pip install 'khoj[local]'
  $env:CMAKE_ARGS = "-DGGML_HIPBLAS=on"
  # 2. Install Khoj
  py -m pip install 'khoj[local]'
-      ```
+       ```
         </TabItem>
         <TabItem value="vulkan" label="VULKAN GPU">
        ```shell
@@ -163,9 +163,36 @@ python -m pip install 'khoj[local]'
  $env:CMAKE_ARGS = "-DGGML_VULKAN=on"
  # 2. Install Khoj
  py -m pip install 'khoj[local]'
-      ```
+       ```
         </TabItem>
       </Tabs>
+
+      ### Windows CLI Limitations
+      The following CLI options have limitations on Windows:
+
+      | CLI Option | Windows Support | Notes |
+      |------------|-----------------|-------|
+      | `--socket` | ❌ Not Available | UNIX sockets are not supported on Windows. Use `--host` and `--port` instead. |
+      | `--host` | ✅ Supported | Use `127.0.0.1` or `0.0.0.0` |
+      | `--port` | ✅ Supported | Default: `42110` |
+      | `--sslcert` | ✅ Supported | Path to SSL certificate file |
+      | `--sslkey` | ✅ Supported | Path to SSL key file |
+      | `--anonymous-mode` | ✅ Supported | Run without authentication |
+      | `--non-interactive` | ✅ Supported | Non-interactive mode |
+
+      :::tip[Windows Path Format]
+      When specifying file paths on Windows, use either:
+      - Backslashes: `C:\path\to\file`
+      - Forward slashes: `C:/path/to/file` (recommended for compatibility)
+      :::
+
+      :::tip[PowerShell Environment Variables]
+      Set environment variables in PowerShell using:
+      ```powershell
+      $env:VAR_NAME="value"
+      ```
+      Or for persistent variables, add to User or System Environment Variables in System Properties.
+      :::
     </TabItem>
     <TabItem value="linux" label="Linux">
       <Tabs groupId="gpu" queryString="gpu">

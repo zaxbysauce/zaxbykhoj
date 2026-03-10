@@ -5,25 +5,28 @@ import os
 import uuid
 from typing import List, Optional, Union
 
+import httpx
 import openai
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 from starlette.authentication import has_required_scope, requires
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from khoj.configure import initialize_content
 from khoj.database import adapters
 from khoj.database.adapters import ConversationAdapters, EntryAdapters, get_user_photo
-from khoj.database.models import KhojUser, SpeechToTextModelOptions, UserConversationConfig
+from khoj.database.models import KhojUser, UserConversationConfig
 from khoj.processor.conversation.openai.whisper import transcribe_audio
+from khoj.routers.auth_helpers import user_config_to_response
 from khoj.routers.helpers import (
     ApiUserRateLimiter,
     CommonQueryParams,
     ConversationCommandRateLimiter,
     execute_search,
-    get_user_config,
     update_telemetry_state,
 )
 from khoj.utils import state
+from khoj.utils.provider_config import is_openai_model
 from khoj.utils.rawconfig import SearchResponse
 from khoj.utils.state import SearchType
 
@@ -107,6 +110,11 @@ def update(
 
 @api.post("/transcribe")
 @requires(["authenticated"])
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError)),
+)
 async def transcribe(
     request: Request,
     common: CommonQueryParams,
@@ -121,6 +129,8 @@ async def transcribe(
     user: KhojUser = request.user.object
     audio_filename = f"{user.uuid}-{str(uuid.uuid4())}.webm"
     user_message: str = None
+    audio_file = None
+    status_code = None
 
     # If the file is too large, return an unprocessable entity error
     if file.size > 10 * 1024 * 1024:
@@ -140,7 +150,8 @@ async def transcribe(
         if not speech_to_text_config:
             # If the user has not configured a speech to text model, return an unsupported on server error
             status_code = 501
-        elif speech_to_text_config.model_type == SpeechToTextModelOptions.ModelType.OPENAI:
+        # Use configurable provider mapping instead of hardcoded enum comparison
+        elif is_openai_model(speech_to_text_config.model_name, model_type=str(speech_to_text_config.model_type)):
             speech2text_model = speech_to_text_config.model_name
             if speech_to_text_config.ai_model_api:
                 api_key = speech_to_text_config.ai_model_api.api_key
@@ -154,7 +165,8 @@ async def transcribe(
                 status_code = 501
     finally:
         # Close and Delete the temporary audio file
-        audio_file.close()
+        if audio_file is not None:
+            audio_file.close()
         os.remove(audio_filename)
 
     if user_message is None:
@@ -176,11 +188,7 @@ async def transcribe(
 @requires(["authenticated"])
 def get_settings(request: Request, detailed: Optional[bool] = False) -> Response:
     user = request.user.object
-    user_config = get_user_config(user, request, is_detailed=detailed)
-    del user_config["request"]
-
-    # Return config data as a JSON response
-    return Response(content=json.dumps(user_config), media_type="application/json", status_code=200)
+    return user_config_to_response(user, request, is_detailed=detailed)
 
 
 @api.patch("/user/name", status_code=200)

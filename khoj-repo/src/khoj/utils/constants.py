@@ -1,5 +1,8 @@
+import os
 from pathlib import Path
 from typing import Dict
+
+from khoj.utils.config import ApiUrlConfig
 
 app_root_directory = Path(__file__).parent.parent.parent
 web_directory = app_root_directory / "khoj/interface/web/"
@@ -8,23 +11,23 @@ next_js_directory = app_root_directory / "khoj/interface/built/"
 pypi_static_directory = app_root_directory / "khoj/interface/compiled/"
 assetlinks_file_path = web_directory / ".well-known/assetlinks.json"
 empty_escape_sequences = "\n|\r|\t| "
-app_env_filepath = "~/.khoj/env"
-telemetry_server = "https://khoj.beta.haletic.com/v1/telemetry"
-content_directory = "~/.khoj/content/"
+app_env_filepath = os.path.expanduser("~/.khoj/env")
+telemetry_server = ApiUrlConfig.TELEMETRY_SERVER_URL
+content_directory = os.path.expanduser("~/.khoj/content/")
 default_openai_chat_models = ["gpt-4o-mini", "gpt-4.1", "o3", "o4-mini"]
 default_gemini_chat_models = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"]
 default_anthropic_chat_models = ["claude-sonnet-4-0", "claude-3-5-haiku-latest"]
 
 empty_config = {
     "search-type": {
-        "image": {"encoder": "sentence-transformers/clip-ViT-B-32", "model_directory": "~/.khoj/search/image/"},
+        "image": {"encoder": "sentence-transformers/clip-ViT-B-32", "model_directory": os.path.expanduser("~/.khoj/search/image/")},
     },
 }
 
 # default app config to use
 default_config = {
     "search-type": {
-        "image": {"encoder": "sentence-transformers/clip-ViT-B-32", "model_directory": "~/.khoj/search/image/"},
+        "image": {"encoder": "sentence-transformers/clip-ViT-B-32", "model_directory": os.path.expanduser("~/.khoj/search/image/")},
     },
 }
 

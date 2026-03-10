@@ -8,7 +8,7 @@ from starlette.authentication import requires
 
 from khoj.database import adapters
 from khoj.database.models import Subscription
-from khoj.routers.helpers import update_telemetry_state
+from khoj.routers.helpers import update_telemetry_state, validate_webhook_signature
 from khoj.utils import state
 
 # Stripe integration for Khoj Cloud Subscription
@@ -29,6 +29,20 @@ async def subscribe(request: Request):
     try:
         payload = await request.body()
         sig_header = request.headers["stripe-signature"]
+
+        # Validate webhook signature using HMAC-SHA256
+        # Stripe signature format: t=timestamp,v1=signature
+        stripe_signature = None
+        for part in sig_header.split(","):
+            if part.startswith("v1="):
+                stripe_signature = part[3:]
+                break
+
+        if not stripe_signature or not validate_webhook_signature(payload, stripe_signature, endpoint_secret):
+            logger.warning("Invalid webhook signature")
+            raise stripe.error.SignatureVerificationError("Invalid signature", sig_header)
+
+        # Also validate using Stripe's built-in validation
         event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
     except ValueError as e:
         # Invalid payload

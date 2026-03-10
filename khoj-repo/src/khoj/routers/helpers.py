@@ -2,6 +2,7 @@ import asyncio
 import base64
 import fnmatch
 import hashlib
+import hmac
 import json
 import logging
 import math
@@ -20,6 +21,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    TypedDict,
     Union,
 )
 from urllib.parse import parse_qs, quote, unquote, urljoin, urlparse
@@ -38,22 +40,19 @@ from pydantic import BaseModel, EmailStr, Field
 from starlette.authentication import has_required_scope
 from starlette.requests import URL
 
-from khoj.database import adapters
 from khoj.database.adapters import (
-    LENGTH_OF_FREE_TRIAL,
     AgentAdapters,
     AutomationAdapters,
     ConversationAdapters,
     EntryAdapters,
     FileObjectAdapters,
     UserMemoryAdapters,
+    aget_default_search_model,
     aget_user_by_email,
     create_khoj_token,
     get_default_search_model,
     get_khoj_tokens,
     get_user_name,
-    get_user_notion_config,
-    get_user_subscription_state,
     require_valid_user,
     run_with_process_lock,
 )
@@ -63,25 +62,16 @@ from khoj.database.models import (
     ChatModel,
     ClientApplication,
     Conversation,
-    GithubConfig,
     KhojUser,
-    NotionConfig,
     ProcessLock,
     RateLimitRecord,
-    ServerChatSettings,
     Subscription,
     TextToImageModelConfig,
     UserMemory,
     UserRequests,
 )
-from khoj.processor.content.docx.docx_to_entries import DocxToEntries
-from khoj.processor.content.github.github_to_entries import GithubToEntries
-from khoj.processor.content.images.image_to_entries import ImageToEntries
-from khoj.processor.content.markdown.markdown_to_entries import MarkdownToEntries
-from khoj.processor.content.notion.notion_to_entries import NotionToEntries
-from khoj.processor.content.org_mode.org_to_entries import OrgToEntries
-from khoj.processor.content.pdf.pdf_to_entries import PdfToEntries
-from khoj.processor.content.plaintext.plaintext_to_entries import PlaintextToEntries
+
+# Vector/embedding-related functions are available in khoj.routers.vector_helpers
 from khoj.processor.conversation import prompts
 from khoj.processor.conversation.anthropic.anthropic_chat import (
     anthropic_send_message_to_model,
@@ -109,16 +99,22 @@ from khoj.processor.conversation.utils import (
     generate_chatml_messages_with_context,
     is_retryable_exception,
 )
-from khoj.processor.speech.text_to_speech import is_eleven_labs_enabled
 from khoj.routers.email import is_resend_enabled, send_task_email
-from khoj.routers.twilio import is_twilio_enabled
+
+# Re-export auth-related functions for backward compatibility
+# Re-export search-related functions for backward compatibility
+from khoj.routers.search_helpers import (
+    execute_search,
+    grep_files,
+    list_files,
+    search_documents,
+)
 from khoj.search_filter.date_filter import DateFilter
 from khoj.search_filter.file_filter import FileFilter
 from khoj.search_filter.word_filter import WordFilter
 from khoj.search_type import text_search
 from khoj.utils import state
 from khoj.utils.helpers import (
-    LRU,
     ConversationCommand,
     ImageShape,
     ToolDefinition,
@@ -135,6 +131,7 @@ from khoj.utils.helpers import (
     tool_descriptions_for_llm,
     truncate_code_context,
 )
+from khoj.utils.provider_config import is_anthropic_model, is_google_model, is_openai_model
 from khoj.utils.rawconfig import (
     ChatRequestBody,
     FileData,
@@ -147,9 +144,46 @@ from khoj.utils.yaml import yaml_dump
 logger = logging.getLogger(__name__)
 
 
+# Type definitions for function return values
+class DataSourcesAndOutput(TypedDict):
+    sources: List["ConversationCommand"]
+    output: "ConversationCommand"
+
+
+class ExcalidrawDiagramResponse(TypedDict):
+    elements: List[Dict]
+    scratchpad: str
+
+
+class ChatStreamResponse(TypedDict):
+    response: str
+    references: Dict
+    usage: Dict
+    images: List[str]
+    files: List[str]
+    mermaidjsDiagram: List[str]
+
+
 NOTION_OAUTH_CLIENT_ID = os.getenv("NOTION_OAUTH_CLIENT_ID")
 NOTION_OAUTH_CLIENT_SECRET = os.getenv("NOTION_OAUTH_CLIENT_SECRET")
 NOTION_REDIRECT_URI = os.getenv("NOTION_REDIRECT_URI")
+
+
+def validate_webhook_signature(payload: bytes, signature: str, secret: str) -> bool:
+    """Validate webhook payload using HMAC-SHA256 signature.
+
+    Args:
+        payload: Raw request body bytes
+        signature: Signature from webhook provider (usually in headers)
+        secret: Shared secret key for HMAC validation
+
+    Returns:
+        True if signature is valid, False otherwise
+    """
+    if not signature or not secret:
+        return False
+    expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
 
 
 def is_query_empty(query: str) -> bool:
@@ -171,15 +205,13 @@ async def is_ready_to_chat(user: KhojUser):
     if user_chat_model is None:
         user_chat_model = await ConversationAdapters.aget_default_chat_model(user)
 
+    # Use configurable provider mapping to check valid model types
     if (
         user_chat_model
         and (
-            user_chat_model.model_type
-            in [
-                ChatModel.ModelType.OPENAI,
-                ChatModel.ModelType.ANTHROPIC,
-                ChatModel.ModelType.GOOGLE,
-            ]
+            is_openai_model(user_chat_model.name, user_chat_model.model_type)
+            or is_anthropic_model(user_chat_model.name, user_chat_model.model_type)
+            or is_google_model(user_chat_model.name, user_chat_model.model_type)
         )
         and user_chat_model.ai_model_api
     ):
@@ -302,18 +334,6 @@ async def acreate_title_from_history(
     return response.text.strip()
 
 
-async def acreate_title_from_query(query: str, user: KhojUser = None) -> str:
-    """
-    Create a title from the given query
-    """
-    title_generation_prompt = prompts.subject_generation.format(query=query)
-
-    with timer("Chat actor: Generate title from query", logger):
-        response = await send_message_to_model_wrapper(title_generation_prompt, fast_model=True, user=user)
-
-    return response.text.strip()
-
-
 async def acheck_if_safe_prompt(system_prompt: str, user: KhojUser = None, lax: bool = False) -> Tuple[bool, str]:
     """
     Check if the system prompt is safe to use
@@ -343,10 +363,10 @@ async def acheck_if_safe_prompt(system_prompt: str, user: KhojUser = None, lax: 
             if not is_safe:
                 reason = response.get("reason", "")
         except Exception:
-            logger.error(f"Invalid response for checking safe prompt: {response}")
+            logger.error(f"Invalid response for checking safe prompt: {response}", exc_info=True)
 
     if not is_safe:
-        logger.error(f"Unsafe prompt: {system_prompt}. Reason: {reason}")
+        logger.error(f"Unsafe prompt: {system_prompt}. Reason: {reason}", exc_info=True)
 
     return is_safe, reason
 
@@ -360,7 +380,7 @@ async def aget_data_sources_and_output_format(
     query_files: str = None,
     relevant_memories: List[UserMemory] = None,
     tracer: dict = {},
-) -> Dict[str, Any]:
+) -> DataSourcesAndOutput:
     """
     Given a query, determine which of the available data sources and output modes the agent should use to answer appropriately.
     """
@@ -530,7 +550,7 @@ async def infer_webpage_urls(
         if is_none_or_empty(valid_unique_urls):
             raise ValueError(f"Invalid list of urls: {response}")
         if len(valid_unique_urls) == 0:
-            logger.error(f"No valid URLs found in response: {response}")
+            logger.error(f"No valid URLs found in response: {response}", exc_info=True)
             return []
         return list(valid_unique_urls)[:max_webpages]
     except Exception:
@@ -598,12 +618,13 @@ async def generate_online_subqueries(
         response = {q.strip() for q in response["queries"] if q.strip()}
         if not isinstance(response, set) or not response or len(response) == 0:
             logger.error(
-                f"Invalid response for constructing online subqueries: {response}. Returning original query: {q}"
+                f"Invalid response for constructing online subqueries: {response}. Returning original query: {q}",
+                exc_info=True,
             )
             return {q}
         return response
     except Exception:
-        logger.error(f"Invalid response for constructing online subqueries: {response}. Returning original query: {q}")
+        logger.error(f"Invalid response for constructing online subqueries: {response}. Returning original query: {q}", exc_info=True)
         return {q}
 
 
@@ -936,7 +957,7 @@ async def generate_excalidraw_diagram_from_description(
     user: KhojUser = None,
     agent: Agent = None,
     tracer: dict = {},
-) -> Dict[str, Any]:
+) -> ExcalidrawDiagramResponse:
     personality_context = (
         prompts.personality_context.format(personality=agent.personality) if agent and agent.personality else ""
     )
@@ -1022,7 +1043,7 @@ async def extract_facts_from_query(
             return parsed_response
 
         except Exception:
-            logger.error(f"Invalid response for extracting facts: {response}")
+            logger.error(f"Invalid response for extracting facts: {response}", exc_info=True)
             return MemoryUpdates(create=[], delete=[])
 
 
@@ -1048,14 +1069,42 @@ async def ai_update_memories(
     if not memory_update:
         return
 
-    # Save the memory updates to the database
-    for memory in memory_update.create:
-        logger.info(f"Creating memory: {memory}")
-        await UserMemoryAdapters.save_memory(user, memory, agent=agent)
+    # Bulk create new memories
+    if memory_update.create:
+        logger.info(f"Creating {len(memory_update.create)} memories")
+        embeddings_model = state.embeddings_model
+        search_model = await aget_default_search_model()
+        default_agent = await AgentAdapters.aget_default_agent()
 
-    for memory in memory_update.delete:
-        logger.info(f"Deleting memory: {memory}")
-        await UserMemoryAdapters.delete_memory(user, memory)
+        # Determine if using custom agent or default
+        use_custom_agent = agent and agent != default_agent
+
+        # Embed all memories in a batch
+        memory_list = list(memory_update.create)
+        embeddings = await sync_to_async(
+            lambda: [embeddings_model[search_model.name].embed_query(memory) for memory in memory_list]
+        )()
+
+        # Create UserMemory objects in memory
+        new_memories = [
+            UserMemory(
+                user=user,
+                raw=memory,
+                embeddings=embedding,
+                search_model=search_model,
+                agent=agent if use_custom_agent else None,
+            )
+            for memory, embedding in zip(memory_list, embeddings)
+        ]
+
+        # Bulk create all memories in a single query
+        await UserMemory.objects.abulk_create(new_memories)
+
+    # Bulk delete memories
+    if memory_update.delete:
+        logger.info(f"Deleting {len(memory_update.delete)} memories")
+        # Delete all memories matching the raw content in a single query
+        await UserMemory.objects.filter(user=user, raw__in=memory_update.delete).adelete()
 
 
 async def generate_mermaidjs_diagram(
@@ -1322,7 +1371,7 @@ async def search_documents(
     conversation = await sync_to_async(ConversationAdapters.get_conversation_by_id)(conversation_id)
 
     if not conversation:
-        logger.error(f"Conversation with id {conversation_id} not found when extracting references.")
+        logger.error(f"Conversation with id {conversation_id} not found when extracting references.", exc_info=True)
         yield compiled_references, inferred_queries, defiltered_query
         return
 
@@ -1465,7 +1514,7 @@ async def extract_questions(
         response = pyjson5.loads(response)
         queries = [q.strip() for q in response["queries"] if q.strip()]
         if not isinstance(queries, list) or not queries:
-            logger.error(f"Invalid response for constructing subqueries: {response}")
+            logger.error(f"Invalid response for constructing subqueries: {response}", exc_info=True)
             return [query]
         return queries
     except Exception:
@@ -1490,7 +1539,7 @@ async def execute_search(
 
     # Ensure the agent, if present, is accessible by the user
     if user and agent and not await AgentAdapters.ais_agent_accessible(agent, user):
-        logger.error(f"Agent {agent.slug} is not accessible by user {user}")
+        logger.error(f"Agent {agent.slug} is not accessible by user {user}", exc_info=True)
         return results
 
     if q is None or q == "":
@@ -1584,7 +1633,8 @@ def send_message_to_model(
     api_key = chat_model.ai_model_api.api_key
     api_base_url = chat_model.ai_model_api.api_base_url
 
-    if model_type == ChatModel.ModelType.OPENAI:
+    # Use configurable provider mapping instead of hardcoded enum comparison
+    if is_openai_model(chat_model_name, model_type):
         return openai_send_message_to_model(
             messages=truncated_messages,
             api_key=api_key,
@@ -1596,7 +1646,7 @@ def send_message_to_model(
             api_base_url=api_base_url,
             tracer=tracer,
         )
-    elif model_type == ChatModel.ModelType.ANTHROPIC:
+    elif is_anthropic_model(chat_model_name, model_type):
         return anthropic_send_message_to_model(
             messages=truncated_messages,
             api_key=api_key,
@@ -1608,7 +1658,7 @@ def send_message_to_model(
             api_base_url=api_base_url,
             tracer=tracer,
         )
-    elif model_type == ChatModel.ModelType.GOOGLE:
+    elif is_google_model(chat_model_name, model_type):
         return gemini_send_message_to_model(
             messages=truncated_messages,
             api_key=api_key,
@@ -1705,7 +1755,7 @@ async def send_message_to_model_wrapper(
             last_exception = e
             if is_retryable_exception(e):
                 if is_last_model:
-                    logger.error(f"All chat models failed. Last error from {chat_model.name}: {e}")
+                    logger.error(f"All chat models failed. Last error from {chat_model.name}: {e}", exc_info=True)
                 else:
                     logger.warning(f"Chat model {chat_model.name} failed with retryable error: {e}. Trying next model.")
                     continue
@@ -1755,7 +1805,8 @@ def send_message_to_model_wrapper_sync(
         vision_enabled=vision_available,
     )
 
-    if model_type == ChatModel.ModelType.OPENAI:
+    # Use configurable provider mapping instead of hardcoded enum comparison
+    if is_openai_model(chat_model_name, model_type):
         return openai_send_message_to_model(
             messages=truncated_messages,
             api_key=api_key,
@@ -1766,7 +1817,7 @@ def send_message_to_model_wrapper_sync(
             tracer=tracer,
         )
 
-    elif model_type == ChatModel.ModelType.ANTHROPIC:
+    elif is_anthropic_model(chat_model_name, model_type):
         return anthropic_send_message_to_model(
             messages=truncated_messages,
             api_key=api_key,
@@ -1776,7 +1827,7 @@ def send_message_to_model_wrapper_sync(
             tracer=tracer,
         )
 
-    elif model_type == ChatModel.ModelType.GOOGLE:
+    elif is_google_model(chat_model_name, model_type):
         return gemini_send_message_to_model(
             messages=truncated_messages,
             api_key=api_key,
@@ -1838,7 +1889,7 @@ def build_conversation_context(
         )
 
     # Add Gemini-specific personality enhancement
-    if model_type == ChatModel.ModelType.GOOGLE:
+    if is_google_model(model_name or "", model_type):
         system_prompt += f"\n\n{prompts.gemini_verbose_language_personality}"
 
     # Add location context if available
@@ -1962,7 +2013,8 @@ async def agenerate_chat_response(
             vision_available=vision_available,
         )
 
-        if chat_model.model_type == ChatModel.ModelType.OPENAI:
+        # Use configurable provider mapping instead of hardcoded enum comparison
+        if is_openai_model(chat_model.name, chat_model.model_type):
             openai_chat_config = chat_model.ai_model_api
             api_key = openai_chat_config.api_key
             chat_model_name = chat_model.name
@@ -1977,7 +2029,7 @@ async def agenerate_chat_response(
                 tracer=tracer,
             )
 
-        elif chat_model.model_type == ChatModel.ModelType.ANTHROPIC:
+        elif is_anthropic_model(chat_model.name, chat_model.model_type):
             api_key = chat_model.ai_model_api.api_key
             api_base_url = chat_model.ai_model_api.api_base_url
             chat_response_generator = converse_anthropic(
@@ -1990,7 +2042,7 @@ async def agenerate_chat_response(
                 deepthought=deepthought,
                 tracer=tracer,
             )
-        elif chat_model.model_type == ChatModel.ModelType.GOOGLE:
+        elif is_google_model(chat_model.name, chat_model.model_type):
             api_key = chat_model.ai_model_api.api_key
             api_base_url = chat_model.ai_model_api.api_base_url
             chat_response_generator = converse_gemini(
@@ -2586,7 +2638,7 @@ def scheduled_chat(
 
     # Stop if the chat API call was not successful
     if raw_response.status_code != 200:
-        logger.error(f"Failed to run schedule chat: {raw_response.text}, user: {user}, query: {query_to_run}")
+        logger.error(f"Failed to run schedule chat: {raw_response.text}, user: {user}, query: {query_to_run}", exc_info=True)
         return None
 
     # Extract the AI response from the chat API response
@@ -2769,7 +2821,7 @@ class MessageProcessor:
         self.generated_files = []
         self.generated_mermaidjs_diagram = []
 
-    def convert_message_chunk_to_json(self, raw_chunk: str) -> Dict[str, Any]:
+    def convert_message_chunk_to_json(self, raw_chunk: str) -> Dict[str, str]:
         if raw_chunk.startswith("{") and raw_chunk.endswith("}"):
             try:
                 json_chunk = json.loads(raw_chunk)
@@ -2825,7 +2877,7 @@ class MessageProcessor:
         return json_data
 
 
-async def read_chat_stream(response_iterator: AsyncGenerator[str, None]) -> Dict[str, Any]:
+async def read_chat_stream(response_iterator: AsyncGenerator[str, None]) -> ChatStreamResponse:
     processor = MessageProcessor()
     buffer = ""
 
@@ -2864,319 +2916,6 @@ def get_message_from_queue(queue: asyncio.Queue) -> Optional[str]:
         return queue.get_nowait()
     except asyncio.QueueEmpty:
         return None
-
-
-def get_user_config(user: KhojUser, request: Request, is_detailed: bool = False):
-    user_picture = request.session.get("user", {}).get("picture")
-    is_active = has_required_scope(request, ["premium"])
-    has_documents = EntryAdapters.user_has_entries(user=user)
-
-    if not is_detailed:
-        return {
-            "request": request,
-            "username": user.username if user else None,
-            "user_photo": user_picture,
-            "is_active": is_active,
-            "has_documents": has_documents,
-            "khoj_version": state.khoj_version,
-        }
-
-    user_subscription_state = get_user_subscription_state(user.email)
-    user_subscription = adapters.get_user_subscription(user.email)
-
-    subscription_renewal_date = (
-        user_subscription.renewal_date.strftime("%d %b %Y")
-        if user_subscription and user_subscription.renewal_date
-        else None
-    )
-    subscription_enabled_trial_at = (
-        user_subscription.enabled_trial_at.strftime("%d %b %Y")
-        if user_subscription and user_subscription.enabled_trial_at
-        else None
-    )
-    given_name = get_user_name(user)
-
-    enabled_content_sources_set = set(EntryAdapters.get_unique_file_sources(user))
-    enabled_content_sources = {
-        "computer": ("computer" in enabled_content_sources_set),
-        "github": ("github" in enabled_content_sources_set),
-        "notion": ("notion" in enabled_content_sources_set),
-    }
-
-    notion_oauth_url = get_notion_auth_url(user)
-    current_notion_config = get_user_notion_config(user)
-    notion_token = current_notion_config.token if current_notion_config else ""
-
-    selected_chat_model_config = ConversationAdapters.get_chat_model(
-        user
-    ) or ConversationAdapters.get_default_chat_model(user)
-    server_chat_settings = ServerChatSettings.objects.first()
-    server_memory_mode = (
-        server_chat_settings.memory_mode
-        if server_chat_settings
-        else ServerChatSettings.MemoryMode.ENABLED_DEFAULT_ON.value  # type: ignore[attr-defined]
-    )
-    enable_memory = ConversationAdapters.is_memory_enabled(user)
-    chat_models = ConversationAdapters.get_conversation_processor_options().all()
-    chat_model_options = list()
-    for chat_model in chat_models:
-        chat_model_options.append(
-            {
-                "name": chat_model.friendly_name,
-                "id": chat_model.id,
-                "strengths": chat_model.strengths,
-                "description": chat_model.description,
-                "tier": chat_model.price_tier,
-            }
-        )
-
-    selected_paint_model_config = ConversationAdapters.get_user_text_to_image_model_config(user)
-    paint_model_options = ConversationAdapters.get_text_to_image_model_options().all()
-    all_paint_model_options = list()
-    for paint_model in paint_model_options:
-        all_paint_model_options.append(
-            {
-                "name": paint_model.friendly_name,
-                "id": paint_model.id,
-                "tier": paint_model.price_tier,
-            }
-        )
-
-    voice_models = ConversationAdapters.get_voice_model_options()
-    voice_model_options = list()
-    for voice_model in voice_models:
-        voice_model_options.append(
-            {
-                "name": voice_model.name,
-                "id": voice_model.model_id,
-                "tier": voice_model.price_tier,
-            }
-        )
-
-    if len(voice_model_options) == 0:
-        eleven_labs_enabled = False
-    else:
-        eleven_labs_enabled = is_eleven_labs_enabled()
-
-    selected_voice_model_config = ConversationAdapters.get_voice_model_config(user)
-
-    return {
-        "request": request,
-        # user info
-        "username": user.username if user else None,
-        "user_photo": user_picture,
-        "is_active": is_active,
-        "given_name": given_name,
-        "phone_number": str(user.phone_number) if user.phone_number else "",
-        "is_phone_number_verified": user.verified_phone_number,
-        # user content settings
-        "enabled_content_source": enabled_content_sources,
-        "has_documents": has_documents,
-        "notion_token": notion_token,
-        "enable_memory": enable_memory,
-        "server_memory_mode": server_memory_mode,
-        # user model settings
-        "chat_model_options": chat_model_options,
-        "selected_chat_model_config": selected_chat_model_config.id if selected_chat_model_config else None,
-        "paint_model_options": all_paint_model_options,
-        "selected_paint_model_config": selected_paint_model_config.id if selected_paint_model_config else None,
-        "voice_model_options": voice_model_options,
-        "selected_voice_model_config": selected_voice_model_config.model_id if selected_voice_model_config else None,
-        # user billing info
-        "subscription_state": user_subscription_state,
-        "subscription_renewal_date": subscription_renewal_date,
-        "subscription_enabled_trial_at": subscription_enabled_trial_at,
-        # server settings
-        "khoj_cloud_subscription_url": os.getenv("KHOJ_CLOUD_SUBSCRIPTION_URL"),
-        "billing_enabled": state.billing_enabled,
-        "is_eleven_labs_enabled": eleven_labs_enabled,
-        "is_twilio_enabled": is_twilio_enabled(),
-        "khoj_version": state.khoj_version,
-        "anonymous_mode": state.anonymous_mode,
-        "notion_oauth_url": notion_oauth_url,
-        "length_of_free_trial": LENGTH_OF_FREE_TRIAL,
-    }
-
-
-def configure_content(
-    user: KhojUser,
-    files: Optional[dict[str, dict[str, str]]],
-    regenerate: bool = False,
-    t: Optional[state.SearchType] = state.SearchType.All,
-) -> bool:
-    success = True
-    if t is None:
-        t = state.SearchType.All
-
-    if t is not None and t in [type.value for type in state.SearchType]:
-        t = state.SearchType(t)
-
-    if t is not None and t.value not in [type.value for type in state.SearchType]:
-        logger.warning(f"🚨 Invalid search type: {t}")
-        return False
-
-    search_type = t.value if t else None
-
-    # Check if client sent any documents of the supported types
-    no_client_sent_documents = all([not files.get(file_type) for file_type in files])
-
-    if files is None:
-        logger.warning(f"🚨 No files to process for {search_type} search.")
-        return True
-
-    try:
-        # Initialize Org Notes Search
-        if (search_type == state.SearchType.All.value or search_type == state.SearchType.Org.value) and files.get(
-            "org"
-        ):
-            logger.info("🦄 Setting up search for orgmode notes")
-            # Extract Entries, Generate Notes Embeddings
-            text_search.setup(
-                OrgToEntries,
-                files.get("org"),
-                regenerate=regenerate,
-                user=user,
-            )
-    except Exception as e:
-        logger.error(f"🚨 Failed to setup org: {e}", exc_info=True)
-        success = False
-
-    try:
-        # Initialize Markdown Search
-        if (search_type == state.SearchType.All.value or search_type == state.SearchType.Markdown.value) and files.get(
-            "markdown"
-        ):
-            logger.info("💎 Setting up search for markdown notes")
-            # Extract Entries, Generate Markdown Embeddings
-            text_search.setup(
-                MarkdownToEntries,
-                files.get("markdown"),
-                regenerate=regenerate,
-                user=user,
-            )
-
-    except Exception as e:
-        logger.error(f"🚨 Failed to setup markdown: {e}", exc_info=True)
-        success = False
-
-    try:
-        # Initialize PDF Search
-        if (search_type == state.SearchType.All.value or search_type == state.SearchType.Pdf.value) and files.get(
-            "pdf"
-        ):
-            logger.info("🖨️ Setting up search for pdf")
-            # Extract Entries, Generate PDF Embeddings
-            text_search.setup(
-                PdfToEntries,
-                files.get("pdf"),
-                regenerate=regenerate,
-                user=user,
-            )
-
-    except Exception as e:
-        logger.error(f"🚨 Failed to setup PDF: {e}", exc_info=True)
-        success = False
-
-    try:
-        # Initialize Plaintext Search
-        if (search_type == state.SearchType.All.value or search_type == state.SearchType.Plaintext.value) and files.get(
-            "plaintext"
-        ):
-            logger.info("📄 Setting up search for plaintext")
-            # Extract Entries, Generate Plaintext Embeddings
-            text_search.setup(
-                PlaintextToEntries,
-                files.get("plaintext"),
-                regenerate=regenerate,
-                user=user,
-            )
-
-    except Exception as e:
-        logger.error(f"🚨 Failed to setup plaintext: {e}", exc_info=True)
-        success = False
-
-    try:
-        # Run server side indexing of user Github docs if no client sent documents
-        if no_client_sent_documents:
-            github_config = GithubConfig.objects.filter(user=user).prefetch_related("githubrepoconfig").first()
-            if (
-                search_type == state.SearchType.All.value or search_type == state.SearchType.Github.value
-            ) and github_config is not None:
-                logger.info("🐙 Setting up search for github")
-                # Extract Entries, Generate Github Embeddings
-                text_search.setup(
-                    GithubToEntries,
-                    None,
-                    regenerate=regenerate,
-                    user=user,
-                    config=github_config,
-                )
-
-    except Exception as e:
-        logger.error(f"🚨 Failed to setup GitHub: {e}", exc_info=True)
-        success = False
-
-    try:
-        # Run server side indexing of user Notion docs if no client sent documents
-        if no_client_sent_documents:
-            # Initialize Notion Search
-            notion_config = NotionConfig.objects.filter(user=user).first()
-            if (
-                search_type == state.SearchType.All.value or search_type == state.SearchType.Notion.value
-            ) and notion_config:
-                logger.info("🔌 Setting up search for notion")
-                text_search.setup(
-                    NotionToEntries,
-                    None,
-                    regenerate=regenerate,
-                    user=user,
-                    config=notion_config,
-                )
-
-    except Exception as e:
-        logger.error(f"🚨 Failed to setup Notion: {e}", exc_info=True)
-        success = False
-
-    try:
-        # Initialize Image Search
-        if (search_type == state.SearchType.All.value or search_type == state.SearchType.Image.value) and files[
-            "image"
-        ]:
-            logger.info("🖼️ Setting up search for images")
-            # Extract Entries, Generate Image Embeddings
-            text_search.setup(
-                ImageToEntries,
-                files.get("image"),
-                regenerate=regenerate,
-                user=user,
-            )
-    except Exception as e:
-        logger.error(f"🚨 Failed to setup images: {e}", exc_info=True)
-        success = False
-    try:
-        if (search_type == state.SearchType.All.value or search_type == state.SearchType.Docx.value) and files["docx"]:
-            logger.info("📄 Setting up search for docx")
-            text_search.setup(
-                DocxToEntries,
-                files.get("docx"),
-                regenerate=regenerate,
-                user=user,
-            )
-    except Exception as e:
-        logger.error(f"🚨 Failed to setup docx: {e}", exc_info=True)
-        success = False
-
-    # Invalidate Query Cache
-    if user:
-        state.query_cache[user.uuid] = LRU()
-
-    return success
-
-
-def get_notion_auth_url(user: KhojUser):
-    if not NOTION_OAUTH_CLIENT_ID or not NOTION_OAUTH_CLIENT_SECRET or not NOTION_REDIRECT_URI:
-        return None
-    return f"https://api.notion.com/v1/oauth/authorize?client_id={NOTION_OAUTH_CLIENT_ID}&redirect_uri={NOTION_REDIRECT_URI}&response_type=code&state={user.uuid}"
 
 
 async def view_file_content(

@@ -18,6 +18,12 @@ from tenacity import (
 )
 from tenacity.before_sleep import before_sleep_log
 
+from khoj.common.image_helpers import (
+    ChatEvent,
+    ImageShape,
+    generate_better_image_prompt,
+    upload_generated_image_to_bucket,
+)
 from khoj.database.adapters import ConversationAdapters
 from khoj.database.models import (
     Agent,
@@ -29,10 +35,9 @@ from khoj.database.models import (
 )
 from khoj.processor.conversation.google.utils import _is_retryable_error
 from khoj.processor.conversation.utils import get_image_from_base64, get_image_from_url
-from khoj.routers.helpers import ChatEvent, ImageShape, generate_better_image_prompt
-from khoj.routers.storage import upload_generated_image_to_bucket
 from khoj.utils import state
 from khoj.utils.helpers import convert_image_to_webp, is_none_or_empty, timer
+from khoj.utils.provider_config import is_google_model, is_openai_model, is_replicate_model
 from khoj.utils.rawconfig import LocationData
 
 logger = logging.getLogger(__name__)
@@ -111,15 +116,16 @@ async def text_to_image(
     # Generate image using the configured model and API
     with timer(f"Generate image with {text_to_image_config.model_type}", logger):
         try:
-            if text_to_image_config.model_type == TextToImageModelConfig.ModelType.OPENAI:
+            # Use configurable provider mapping instead of hardcoded enum comparison
+            if is_openai_model(text2image_model, model_type=str(text_to_image_config.model_type)):
                 webp_image_bytes = generate_image_with_openai(
                     image_prompt, text_to_image_config, text2image_model, image_shape
                 )
-            elif text_to_image_config.model_type == TextToImageModelConfig.ModelType.REPLICATE:
+            elif is_replicate_model(text2image_model, model_type=str(text_to_image_config.model_type)):
                 webp_image_bytes = generate_image_with_replicate(
                     image_prompt, text_to_image_config, text2image_model, image_shape
                 )
-            elif text_to_image_config.model_type == TextToImageModelConfig.ModelType.GOOGLE:
+            elif is_google_model(text2image_model, model_type=str(text_to_image_config.model_type)):
                 webp_image_bytes = generate_image_with_google(
                     image_prompt,
                     text_to_image_config,

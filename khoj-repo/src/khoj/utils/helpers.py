@@ -17,6 +17,8 @@ from collections import OrderedDict
 from copy import deepcopy
 from enum import Enum
 from functools import lru_cache
+
+from khoj.utils.cache import _tokenizer_cache
 from importlib import import_module
 from importlib.metadata import version
 from itertools import islice
@@ -24,7 +26,7 @@ from os import path
 from pathlib import Path
 from textwrap import dedent
 from time import perf_counter
-from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Dict, NamedTuple, Optional, Tuple, Type, Union
 from urllib.parse import ParseResult, urlparse
 
 import anthropic
@@ -82,6 +84,46 @@ class AsyncIteratorWrapper:
 
 def is_none_or_empty(item):
     return item is None or (hasattr(item, "__iter__") and len(item) == 0) or item == ""
+
+
+# Regex patterns for sensitive data redaction
+_SENSITIVE_PATTERNS = [
+    # Passwords in key-value pairs (e.g., password=secret, "password": "secret") - include ; ) ] as delimiters
+    (re.compile(r'([\'"]?(?:password|passwd|pwd|secret|token|api_key|apikey|access_token|auth_token)[\'"]?\s*[:=]\s*[\'"]?)([^\'" ,;\}\)]+)', re.IGNORECASE), r'\1[REDACTED]'),
+    # API keys and tokens in query parameters (e.g., ?api_key=xxx)
+    (re.compile(r'([?&](?:api_key|apiKey|apikey|token|secret|key)=)([^&\s"]+)', re.IGNORECASE), r'\1[REDACTED]'),
+    # Bearer tokens (e.g., Bearer xxx)
+    (re.compile(r'(Bearer\s+)([^\s]+)', re.IGNORECASE), r'\1[REDACTED]'),
+    # Email addresses
+    (re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'), '[EMAIL_REDACTED]'),
+    # IPv4 addresses (exclude private IPs like 127.0.0.1 for localhost)
+    (re.compile(r'\b(?!127\.)(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b'), '[IP_REDACTED]'),
+    # AWS keys (access key ID pattern)
+    (re.compile(r'(AKIA[0-9A-Z]{16})'), '[AWS_KEY_REDACTED]'),
+    # Specific token prefixes (sk-, ghp_, eyJ for OpenAI, GitHub, JWT)
+    (re.compile(r'(sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)'), '[TOKEN_REDACTED]'),
+]
+
+
+def redact_sensitive_data(message: str) -> str:
+    """Redact sensitive data from log messages.
+
+    This function redacts passwords, tokens, API keys, secrets, emails, and IP addresses
+    from log messages to prevent sensitive data from being logged.
+
+    Args:
+        message: The log message to redact sensitive data from.
+
+    Returns:
+        The message with sensitive data redacted.
+    """
+    if not isinstance(message, str):
+        return message
+
+    redacted = message
+    for pattern, replacement in _SENSITIVE_PATTERNS:
+        redacted = pattern.sub(replacement, redacted)
+    return redacted
 
 
 def to_snake_case_from_dash(item: str):
@@ -906,7 +948,12 @@ class ImageShape(str, Enum):
     SQUARE = "Square"
 
 
-def truncate_code_context(original_code_results: dict[str, Any], max_chars=10000) -> dict[str, Any]:
+# Type definitions for code execution results
+type CodeFileResult = Dict[str, "CodeExecutionResult"]
+type CodeExecutionResult = Dict[str, Dict[str, Any]]
+
+
+def truncate_code_context(original_code_results: CodeFileResult, max_chars: int = 10000) -> CodeFileResult:
     """
     Truncate large output files and drop image file data from code results.
     """
@@ -984,6 +1031,17 @@ def get_encoder(
     model_name: str,
     tokenizer_name=None,
 ) -> tiktoken.Encoding | PreTrainedTokenizer | PreTrainedTokenizerFast:
+    """Get encoder for the given model with caching.
+
+    Uses in-memory cache to avoid re-loading tokenizers for the same model.
+    """
+    # Generate cache key
+    cache_key = f"{tokenizer_name or ''}:{model_name}"
+
+    # Check cache first
+    if cache_key in _tokenizer_cache:
+        return _tokenizer_cache[cache_key]
+
     default_tokenizer = "gpt-4o"
 
     try:
@@ -994,6 +1052,9 @@ def get_encoder(
             encoder = tiktoken.encoding_for_model("gpt-4o" if model_name.startswith("o1") else model_name)
     except Exception:
         encoder = tiktoken.encoding_for_model(default_tokenizer)
+
+    # Cache the encoder
+    _tokenizer_cache[cache_key] = encoder
     return encoder
 
 

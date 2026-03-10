@@ -200,11 +200,12 @@ export class KhojChatView extends KhojPaneView {
         let { contentEl } = this;
 
         // Construct Content Security Policy
+        // CSP hardened: Removed 'unsafe-inline' from script-src and style-src for improved security
         let defaultDomains = `'self' ${this.setting.khojUrl} https://*.obsidian.md https://app.khoj.dev https://assets.khoj.dev`;
         const defaultSrc = `default-src ${defaultDomains};`;
-        const scriptSrc = `script-src ${defaultDomains} 'unsafe-inline';`;
+        const scriptSrc = `script-src ${defaultDomains};`;
         const connectSrc = `connect-src ${this.setting.khojUrl} wss://*.obsidian.md/ https://ipapi.co/json;`;
-        const styleSrc = `style-src ${defaultDomains} 'unsafe-inline';`;
+        const styleSrc = `style-src ${defaultDomains};`;
         const imgSrc = `img-src * app: data:;`;
         const childSrc = `child-src 'none';`;
         const objectSrc = `object-src 'none';`;

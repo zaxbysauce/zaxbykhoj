@@ -6,7 +6,7 @@ import pgvector.django
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("database", "0106_add_ldap_dn"),
+        ("database", "0105_add_hybrid_fields"),
     ]
 
     operations = [

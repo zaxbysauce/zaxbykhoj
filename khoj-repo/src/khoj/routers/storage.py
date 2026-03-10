@@ -40,7 +40,7 @@ def upload_image_to_bucket(webp_image: bytes, user_id: uuid.UUID, bucket_name: s
         )
         return f"https://{bucket_name}/{image_key}"
     except Exception as e:
-        logger.error(f"Failed to upload image to S3: {e}")
+        logger.error(f"Failed to upload image to S3: {e}", exc_info=True)
         return None
 
 

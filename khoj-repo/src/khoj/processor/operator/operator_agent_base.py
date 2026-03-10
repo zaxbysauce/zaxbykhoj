@@ -38,8 +38,10 @@ class OperatorAgent(ABC):
         chat_history: List[AgentMessage] = [],
         previous_trajectory: Optional[OperatorRun] = None,
         tracer: dict = {},
+        query_images: Optional[List[str]] = None,
     ):
         self.query = query
+        self.query_images = query_images
         self.vision_model = vision_model
         self.environment_type = environment_type
         self.max_iterations = max_iterations
@@ -52,7 +54,15 @@ class OperatorAgent(ABC):
             if previous_trajectory.trajectory and previous_trajectory.trajectory[-1].role == "assistant":
                 previous_trajectory.trajectory.pop()
             self.messages += previous_trajectory.trajectory
-        self.messages += [AgentMessage(role="user", content=query)]
+
+        # Construct message content with optional images
+        if query_images:
+            message_content = [{"type": "text", "text": query}]
+            for image in query_images:
+                message_content.append({"type": "image_url", "image_url": {"url": image}})
+        else:
+            message_content = query
+        self.messages += [AgentMessage(role="user", content=message_content)]
 
         # Context compression parameters
         self.context_compress_trigger = 2e3  # heuristic to determine compression trigger

@@ -8,7 +8,7 @@ import secrets
 import sys
 from datetime import date, datetime, timedelta, timezone
 from enum import Enum
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import (
     Any,
     Callable,
@@ -74,6 +74,12 @@ from khoj.search_filter.date_filter import DateFilter
 from khoj.search_filter.file_filter import FileFilter
 from khoj.search_filter.word_filter import WordFilter
 from khoj.utils import state
+from khoj.utils.cache import (
+    _ai_model_cache,
+    _chat_model_cache,
+    _user_subscription_cache,
+    clear_all_caches,
+)
 from khoj.utils.helpers import (
     clean_object_for_db,
     clean_text_for_db,
@@ -84,6 +90,7 @@ from khoj.utils.helpers import (
     normalize_email,
     timer,
 )
+from khoj.utils.provider_config import is_anthropic_model, is_google_model, is_openai_model
 
 logger = logging.getLogger(__name__)
 
@@ -409,18 +416,46 @@ def get_user_subscription_state(email: str) -> str:
 async def aget_user_subscription_state(user: KhojUser) -> str:
     """Get subscription state of user
     Valid state transitions: trial -> subscribed <-> unsubscribed OR expired
+
+    Cached for 60 seconds to reduce database queries.
     """
+    # Check cache first
+    cache_key = f"subscription_state_{user.id}"
+    if cache_key in _user_subscription_cache:
+        return _user_subscription_cache[cache_key]
+
     user_subscription = await Subscription.objects.filter(user=user).afirst()
-    return await sync_to_async(subscription_to_state)(user_subscription)
+    result = await sync_to_async(subscription_to_state)(user_subscription)
+
+    # Cache the result
+    _user_subscription_cache[cache_key] = result
+    return result
+
+
+def clear_user_subscription_cache(user_id: int = None):
+    """Clear subscription cache. If user_id is provided, clear only that user's cache."""
+    if user_id:
+        cache_key = f"subscription_state_{user_id}"
+        if cache_key in _user_subscription_cache:
+            del _user_subscription_cache[cache_key]
+    else:
+        _user_subscription_cache.clear()
 
 
 @arequire_valid_user
 async def ais_user_subscribed(user: KhojUser) -> bool:
     """
     Get whether the user is subscribed
+
+    Cached for 60 seconds to reduce database queries.
     """
     if not state.billing_enabled or state.anonymous_mode:
         return True
+
+    # Check cache first
+    cache_key = f"is_subscribed_{user.id}"
+    if cache_key in _user_subscription_cache:
+        return _user_subscription_cache[cache_key]
 
     subscription_state = await aget_user_subscription_state(user)
     subscribed = (
@@ -428,6 +463,9 @@ async def ais_user_subscribed(user: KhojUser) -> bool:
         or subscription_state == SubscriptionState.TRIAL.value
         or subscription_state == SubscriptionState.UNSUBSCRIBED.value
     )
+
+    # Cache the result
+    _user_subscription_cache[cache_key] = subscribed
     return subscribed
 
 
@@ -577,13 +615,24 @@ async def aget_default_search_model() -> SearchModelConfig:
     return await SearchModelConfig.objects.afirst()
 
 
+@lru_cache(maxsize=1)
 def get_or_create_search_models():
+    """Get search models configuration.
+
+    Cached using lru_cache since search models are set during server initialization
+    and don't change during runtime.
+    """
     search_models = SearchModelConfig.objects.all()
     if search_models.count() == 0:
         SearchModelConfig.objects.create()
         search_models = SearchModelConfig.objects.all()
 
     return search_models
+
+
+def clear_search_models_cache():
+    """Clear the search models cache."""
+    get_or_create_search_models.cache_clear()
 
 
 class ProcessLockAdapters:
@@ -1162,11 +1211,41 @@ class ConversationAdapters:
 
     @staticmethod
     def get_ai_model_api():
-        return AiModelApi.objects.filter().first()
+        """Get AI model API configuration.
+
+        Cached for 5 minutes to reduce database queries.
+        """
+        # Check cache first
+        cache_key = "ai_model_api"
+        if cache_key in _ai_model_cache:
+            return _ai_model_cache[cache_key]
+
+        result = AiModelApi.objects.filter().first()
+
+        # Cache the result
+        _ai_model_cache[cache_key] = result
+        return result
 
     @staticmethod
     def has_valid_ai_model_api():
-        return AiModelApi.objects.filter().exists()
+        """Check if AI model API is configured.
+
+        Cached for 5 minutes to reduce database queries.
+        """
+        # Check cache first
+        cache_key = "has_valid_ai_model_api"
+        if cache_key in _ai_model_cache:
+            return _ai_model_cache[cache_key]
+
+        result = AiModelApi.objects.filter().exists()
+
+        # Cache the result
+        _ai_model_cache[cache_key] = result
+        return result
+
+    def clear_ai_model_cache():
+        """Clear AI model cache."""
+        _ai_model_cache.clear()
 
     @staticmethod
     @arequire_valid_user
@@ -1205,6 +1284,15 @@ class ConversationAdapters:
 
     @staticmethod
     async def aget_chat_model(user: KhojUser):
+        """Get chat model for user.
+
+        Cached for 2 minutes to reduce database queries.
+        """
+        # Check cache first
+        cache_key = f"chat_model_{user.id}"
+        if cache_key in _chat_model_cache:
+            return _chat_model_cache[cache_key]
+
         subscribed = await ais_user_subscribed(user)
         config = (
             await UserConversationConfig.objects.filter(user=user)
@@ -1214,15 +1302,23 @@ class ConversationAdapters:
         if subscribed:
             # Subscibed users can use any available chat model
             if config:
-                return config.setting
+                result = config.setting
+                _chat_model_cache[cache_key] = result
+                return result
             # Fallback to the default advanced chat model
-            return await ConversationAdapters.aget_advanced_chat_model(user)
+            result = await ConversationAdapters.aget_advanced_chat_model(user)
+            _chat_model_cache[cache_key] = result
+            return result
         else:
             # Non-subscribed users can use any free chat model
             if config and config.setting.price_tier == PriceTier.FREE:
-                return config.setting
+                result = config.setting
+                _chat_model_cache[cache_key] = result
+                return result
             # Fallback to the default chat model
-            return await ConversationAdapters.aget_default_chat_model(user)
+            result = await ConversationAdapters.aget_default_chat_model(user)
+            _chat_model_cache[cache_key] = result
+            return result
 
     @staticmethod
     def get_chat_model_by_name(chat_model_name: str, ai_model_api_name: str = None):
@@ -1496,7 +1592,7 @@ class ConversationAdapters:
         if not enabled_scrapers:
             # Use scrapers enabled via environment variables
             if os.getenv("EXA_API_KEY"):
-                api_url = os.getenv("EXA_API_URL", "https://api.exa.ai")
+                api_url = os.getenv("EXA_API_URL", ApiUrlConfig.EXA_API_URL)
                 enabled_scrapers.append(
                     WebScraper(
                         type=WebScraper.WebScraperType.EXA,
@@ -1506,7 +1602,7 @@ class ConversationAdapters:
                     )
                 )
             if os.getenv("OLOSTEP_API_KEY"):
-                api_url = os.getenv("OLOSTEP_API_URL", "https://agent.olostep.com/olostep-p2p-incomingAPI")
+                api_url = os.getenv("OLOSTEP_API_URL", ApiUrlConfig.OLOSTEP_API_URL)
                 enabled_scrapers.append(
                     WebScraper(
                         type=WebScraper.WebScraperType.OLOSTEP,
@@ -1516,7 +1612,7 @@ class ConversationAdapters:
                     )
                 )
             if os.getenv("FIRECRAWL_API_KEY"):
-                api_url = os.getenv("FIRECRAWL_API_URL", "https://api.firecrawl.dev")
+                api_url = os.getenv("FIRECRAWL_API_URL", ApiUrlConfig.FIRECRAWL_API_URL)
                 enabled_scrapers.append(
                     WebScraper(
                         type=WebScraper.WebScraperType.FIRECRAWL,
@@ -1732,14 +1828,16 @@ class ConversationAdapters:
         if chat_model is None:
             chat_model = await ConversationAdapters.aget_default_chat_model()
 
+        # Use configurable provider mapping to check valid model types
         if (
-            chat_model.model_type
-            in [
-                ChatModel.ModelType.ANTHROPIC,
-                ChatModel.ModelType.OPENAI,
-                ChatModel.ModelType.GOOGLE,
-            ]
-        ) and chat_model.ai_model_api:
+            chat_model
+            and (
+                is_openai_model(chat_model.name, chat_model.model_type)
+                or is_anthropic_model(chat_model.name, chat_model.model_type)
+                or is_google_model(chat_model.name, chat_model.model_type)
+            )
+            and chat_model.ai_model_api
+        ):
             return chat_model
 
         else:

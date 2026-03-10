@@ -31,6 +31,7 @@ from khoj.utils.helpers import (
     is_none_or_empty,
     is_promptrace_enabled,
 )
+from khoj.utils.config import TimeoutConfig
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ def anthropic_completion_with_backoff(
         messages=formatted_messages,
         model=model_name,  # type: ignore
         temperature=temperature,
-        timeout=20,
+        timeout=TimeoutConfig.ANTHROPIC_TIMEOUT,
         max_tokens=max_tokens,
         **(model_kwargs),
     ) as stream:
@@ -216,7 +217,7 @@ async def anthropic_chat_completion_with_backoff(
         model=model_name,  # type: ignore
         temperature=temperature,
         system=system,
-        timeout=20,
+        timeout=TimeoutConfig.ANTHROPIC_TIMEOUT,
         max_tokens=max_tokens,
         **model_kwargs,
     ) as stream:

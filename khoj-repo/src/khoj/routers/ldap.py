@@ -111,7 +111,21 @@ def _check_rate_limit(identifier: str, max_attempts: int = 5, window: int = 60) 
     return True
 
 
-def require_admin(user: KhojUser = Depends()) -> KhojUser:
+def get_current_user(request: Request) -> KhojUser:
+    """Get the authenticated Django user from the request.
+    
+    Raises HTTP 401 if user is not authenticated.
+    """
+    if not hasattr(request, "user") or not request.user.is_authenticated:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return request.user.object
+
+
+def require_admin(user: KhojUser = Depends(get_current_user)) -> KhojUser:
     """Require admin access for LDAP settings."""
     if not user.is_staff and not user.is_superuser:
         raise HTTPException(
