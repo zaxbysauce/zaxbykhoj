@@ -1,0 +1,1466 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": "2026-03-11T13:51:07.409Z",
+  "planTitle": "Comprehensive Codebase Review - Khoj",
+  "currentPhase": 14,
+  "phaseSummaries": [
+    {
+      "phaseId": 1,
+      "phaseName": "Codebase Ingest & Inventory",
+      "phaseStatus": "pending",
+      "totalTasks": 1,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "1.1"
+        ],
+        "test": [
+          "1.1"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "1.1",
+          "reason": "review evidence missing for 1 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "1.1",
+          "reason": "test evidence missing for 1 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "1.1",
+          "phase": 1,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 2,
+      "phaseName": "Deep Code Analysis",
+      "phaseStatus": "pending",
+      "totalTasks": 7,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "2.1",
+          "2.2",
+          "2.3",
+          "2.4",
+          "2.5",
+          "2.6",
+          "2.7"
+        ],
+        "test": [
+          "2.1",
+          "2.2",
+          "2.3",
+          "2.4",
+          "2.5",
+          "2.6",
+          "2.7"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7",
+          "reason": "review evidence missing for 7 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7",
+          "reason": "test evidence missing for 7 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "2.1",
+          "phase": 2,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "2.2",
+          "phase": 2,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "2.3",
+          "phase": 2,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "2.4",
+          "phase": 2,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "2.5",
+          "phase": 2,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "2.6",
+          "phase": 2,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "2.7",
+          "phase": 2,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 3,
+      "phaseName": "SME Consultations",
+      "phaseStatus": "pending",
+      "totalTasks": 3,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "3.1",
+          "3.2",
+          "3.3"
+        ],
+        "test": [
+          "3.1",
+          "3.2",
+          "3.3"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "3.1, 3.2, 3.3",
+          "reason": "review evidence missing for 3 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "3.1, 3.2, 3.3",
+          "reason": "test evidence missing for 3 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "3.1",
+          "phase": 3,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "3.2",
+          "phase": 3,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "3.3",
+          "phase": 3,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 4,
+      "phaseName": "Compile & Classify Findings",
+      "phaseStatus": "pending",
+      "totalTasks": 1,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "4.1"
+        ],
+        "test": [
+          "4.1"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "4.1",
+          "reason": "review evidence missing for 1 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "4.1",
+          "reason": "test evidence missing for 1 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "4.1",
+          "phase": 4,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 5,
+      "phaseName": "Critical Security Fixes",
+      "phaseStatus": "pending",
+      "totalTasks": 5,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "5.1",
+          "5.2",
+          "5.3",
+          "5.4",
+          "5.5"
+        ],
+        "test": [
+          "5.1",
+          "5.2",
+          "5.3",
+          "5.4",
+          "5.5"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "5.1, 5.2, 5.3, 5.4, 5.5",
+          "reason": "review evidence missing for 5 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "5.1, 5.2, 5.3, 5.4, 5.5",
+          "reason": "test evidence missing for 5 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "blocked_task",
+          "taskId": "5.1",
+          "reason": "Missing evidence: review, test",
+          "severity": "high"
+        },
+        {
+          "type": "blocked_task",
+          "taskId": "5.2",
+          "reason": "Missing evidence: review, test",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "5.1",
+          "phase": 5,
+          "taskStatus": "in_progress",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [
+            "Missing evidence: review, test"
+          ],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "5.2",
+          "phase": 5,
+          "taskStatus": "in_progress",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [
+            "Missing evidence: review, test"
+          ],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "5.3",
+          "phase": 5,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "5.4",
+          "phase": 5,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "5.5",
+          "phase": 5,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 6,
+      "phaseName": "Critical Cross-Platform Fixes",
+      "phaseStatus": "pending",
+      "totalTasks": 6,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "6.1",
+          "6.2",
+          "6.3",
+          "6.4",
+          "6.5",
+          "6.6"
+        ],
+        "test": [
+          "6.1",
+          "6.2",
+          "6.3",
+          "6.4",
+          "6.5",
+          "6.6"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "6.1, 6.2, 6.3, 6.4, 6.5, 6.6",
+          "reason": "review evidence missing for 6 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "6.1, 6.2, 6.3, 6.4, 6.5, 6.6",
+          "reason": "test evidence missing for 6 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "6.1",
+          "phase": 6,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "6.2",
+          "phase": 6,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "6.3",
+          "phase": 6,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "6.4",
+          "phase": 6,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "6.5",
+          "phase": 6,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "6.6",
+          "phase": 6,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 7,
+      "phaseName": "Critical Architecture - Circular Dependencies",
+      "phaseStatus": "pending",
+      "totalTasks": 3,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "7.1",
+          "7.2",
+          "7.3"
+        ],
+        "test": [
+          "7.1",
+          "7.2",
+          "7.3"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "7.1, 7.2, 7.3",
+          "reason": "review evidence missing for 3 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "7.1, 7.2, 7.3",
+          "reason": "test evidence missing for 3 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "7.1",
+          "phase": 7,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "7.2",
+          "phase": 7,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "7.3",
+          "phase": 7,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 8,
+      "phaseName": "Critical Architecture - God Object Refactor",
+      "phaseStatus": "pending",
+      "totalTasks": 4,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "8.1",
+          "8.2",
+          "8.3",
+          "8.4"
+        ],
+        "test": [
+          "8.1",
+          "8.2",
+          "8.3",
+          "8.4"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "8.1, 8.2, 8.3, 8.4",
+          "reason": "review evidence missing for 4 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "8.1, 8.2, 8.3, 8.4",
+          "reason": "test evidence missing for 4 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "8.1",
+          "phase": 8,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "8.2",
+          "phase": 8,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "8.3",
+          "phase": 8,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "8.4",
+          "phase": 8,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 9,
+      "phaseName": "Critical Architecture - Error Boundaries",
+      "phaseStatus": "pending",
+      "totalTasks": 3,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "9.1",
+          "9.2",
+          "9.3"
+        ],
+        "test": [
+          "9.1",
+          "9.2",
+          "9.3"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "9.1, 9.2, 9.3",
+          "reason": "review evidence missing for 3 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "9.1, 9.2, 9.3",
+          "reason": "test evidence missing for 3 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "9.1",
+          "phase": 9,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "9.2",
+          "phase": 9,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "9.3",
+          "phase": 9,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 10,
+      "phaseName": "Critical Performance Fixes",
+      "phaseStatus": "pending",
+      "totalTasks": 3,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "10.1",
+          "10.2",
+          "10.3"
+        ],
+        "test": [
+          "10.1",
+          "10.2",
+          "10.3"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "10.1, 10.2, 10.3",
+          "reason": "review evidence missing for 3 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "10.1, 10.2, 10.3",
+          "reason": "test evidence missing for 3 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "10.1",
+          "phase": 10,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "10.2",
+          "phase": 10,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "10.3",
+          "phase": 10,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 11,
+      "phaseName": "Critical Documentation Fixes",
+      "phaseStatus": "pending",
+      "totalTasks": 1,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "11.1"
+        ],
+        "test": [
+          "11.1"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "11.1",
+          "reason": "review evidence missing for 1 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "11.1",
+          "reason": "test evidence missing for 1 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "11.1",
+          "phase": 11,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 12,
+      "phaseName": "Major Fixes - Provider Enum",
+      "phaseStatus": "pending",
+      "totalTasks": 1,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "12.1"
+        ],
+        "test": [
+          "12.1"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "12.1",
+          "reason": "review evidence missing for 1 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "12.1",
+          "reason": "test evidence missing for 1 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "12.1",
+          "phase": 12,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 13,
+      "phaseName": "Major Fixes - Security",
+      "phaseStatus": "pending",
+      "totalTasks": 4,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "13.1",
+          "13.2",
+          "13.3",
+          "13.4"
+        ],
+        "test": [
+          "13.1",
+          "13.2",
+          "13.3",
+          "13.4"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "13.1, 13.2, 13.3, 13.4",
+          "reason": "review evidence missing for 4 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "13.1, 13.2, 13.3, 13.4",
+          "reason": "test evidence missing for 4 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "13.1",
+          "phase": 13,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "13.2",
+          "phase": 13,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "13.3",
+          "phase": 13,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "13.4",
+          "phase": 13,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    },
+    {
+      "phaseId": 14,
+      "phaseName": "Major Fixes - Cross-Platform",
+      "phaseStatus": "pending",
+      "totalTasks": 3,
+      "completedTasks": 0,
+      "tasksWithEvidence": 0,
+      "tasksWithCompleteEvidence": 0,
+      "completionRatio": 0,
+      "missingEvidenceByType": {
+        "review": [
+          "14.1",
+          "14.2",
+          "14.3"
+        ],
+        "test": [
+          "14.1",
+          "14.2",
+          "14.3"
+        ]
+      },
+      "blockers": [
+        {
+          "type": "missing_evidence",
+          "taskId": "14.1, 14.2, 14.3",
+          "reason": "review evidence missing for 3 task(s)",
+          "severity": "high"
+        },
+        {
+          "type": "missing_evidence",
+          "taskId": "14.1, 14.2, 14.3",
+          "reason": "test evidence missing for 3 task(s)",
+          "severity": "high"
+        }
+      ],
+      "tasks": [
+        {
+          "taskId": "14.1",
+          "phase": 14,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "14.2",
+          "phase": 14,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        },
+        {
+          "taskId": "14.3",
+          "phase": 14,
+          "taskStatus": "pending",
+          "evidenceCount": 0,
+          "hasReview": false,
+          "hasTest": false,
+          "hasApproval": false,
+          "missingEvidence": [
+            "review",
+            "test"
+          ],
+          "isComplete": false,
+          "blockers": [],
+          "lastEvidenceTimestamp": null
+        }
+      ]
+    }
+  ],
+  "overallCompletionRatio": 0,
+  "overallBlockers": [
+    {
+      "type": "missing_evidence",
+      "taskId": "1.1",
+      "reason": "review evidence missing for 1 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "1.1",
+      "reason": "test evidence missing for 1 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7",
+      "reason": "review evidence missing for 7 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7",
+      "reason": "test evidence missing for 7 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "3.1, 3.2, 3.3",
+      "reason": "review evidence missing for 3 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "3.1, 3.2, 3.3",
+      "reason": "test evidence missing for 3 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "4.1",
+      "reason": "review evidence missing for 1 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "4.1",
+      "reason": "test evidence missing for 1 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "5.1, 5.2, 5.3, 5.4, 5.5",
+      "reason": "review evidence missing for 5 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "5.1, 5.2, 5.3, 5.4, 5.5",
+      "reason": "test evidence missing for 5 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "blocked_task",
+      "taskId": "5.1",
+      "reason": "Missing evidence: review, test",
+      "severity": "high"
+    },
+    {
+      "type": "blocked_task",
+      "taskId": "5.2",
+      "reason": "Missing evidence: review, test",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "6.1, 6.2, 6.3, 6.4, 6.5, 6.6",
+      "reason": "review evidence missing for 6 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "6.1, 6.2, 6.3, 6.4, 6.5, 6.6",
+      "reason": "test evidence missing for 6 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "7.1, 7.2, 7.3",
+      "reason": "review evidence missing for 3 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "7.1, 7.2, 7.3",
+      "reason": "test evidence missing for 3 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "8.1, 8.2, 8.3, 8.4",
+      "reason": "review evidence missing for 4 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "8.1, 8.2, 8.3, 8.4",
+      "reason": "test evidence missing for 4 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "9.1, 9.2, 9.3",
+      "reason": "review evidence missing for 3 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "9.1, 9.2, 9.3",
+      "reason": "test evidence missing for 3 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "10.1, 10.2, 10.3",
+      "reason": "review evidence missing for 3 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "10.1, 10.2, 10.3",
+      "reason": "test evidence missing for 3 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "11.1",
+      "reason": "review evidence missing for 1 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "11.1",
+      "reason": "test evidence missing for 1 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "12.1",
+      "reason": "review evidence missing for 1 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "12.1",
+      "reason": "test evidence missing for 1 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "13.1, 13.2, 13.3, 13.4",
+      "reason": "review evidence missing for 4 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "13.1, 13.2, 13.3, 13.4",
+      "reason": "test evidence missing for 4 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "14.1, 14.2, 14.3",
+      "reason": "review evidence missing for 3 task(s)",
+      "severity": "high"
+    },
+    {
+      "type": "missing_evidence",
+      "taskId": "14.1, 14.2, 14.3",
+      "reason": "test evidence missing for 3 task(s)",
+      "severity": "high"
+    }
+  ],
+  "summaryText": "Evidence Summary for \"Comprehensive Codebase Review - Khoj\"\nGenerated: 2026-03-11T13:51:07.409Z\n\nOverall Completion: 0.0%\nCurrent Phase: 14\n\n## Phase 1: Codebase Ingest & Inventory\n  Tasks: 0/1 completed (0.0%)\n  Evidence: 0/1 complete\n  Blockers:\n    - [high] review evidence missing for 1 task(s)\n    - [high] test evidence missing for 1 task(s)\n\n## Phase 2: Deep Code Analysis\n  Tasks: 0/7 completed (0.0%)\n  Evidence: 0/7 complete\n  Blockers:\n    - [high] review evidence missing for 7 task(s)\n    - [high] test evidence missing for 7 task(s)\n\n## Phase 3: SME Consultations\n  Tasks: 0/3 completed (0.0%)\n  Evidence: 0/3 complete\n  Blockers:\n    - [high] review evidence missing for 3 task(s)\n    - [high] test evidence missing for 3 task(s)\n\n## Phase 4: Compile & Classify Findings\n  Tasks: 0/1 completed (0.0%)\n  Evidence: 0/1 complete\n  Blockers:\n    - [high] review evidence missing for 1 task(s)\n    - [high] test evidence missing for 1 task(s)\n\n## Phase 5: Critical Security Fixes\n  Tasks: 0/5 completed (0.0%)\n  Evidence: 0/5 complete\n  Blockers:\n    - [high] review evidence missing for 5 task(s)\n    - [high] test evidence missing for 5 task(s)\n    - [high] Missing evidence: review, test\n    - [high] Missing evidence: review, test\n\n## Phase 6: Critical Cross-Platform Fixes\n  Tasks: 0/6 completed (0.0%)\n  Evidence: 0/6 complete\n  Blockers:\n    - [high] review evidence missing for 6 task(s)\n    - [high] test evidence missing for 6 task(s)\n\n## Phase 7: Critical Architecture - Circular Dependencies\n  Tasks: 0/3 completed (0.0%)\n  Evidence: 0/3 complete\n  Blockers:\n    - [high] review evidence missing for 3 task(s)\n    - [high] test evidence missing for 3 task(s)\n\n## Phase 8: Critical Architecture - God Object Refactor\n  Tasks: 0/4 completed (0.0%)\n  Evidence: 0/4 complete\n  Blockers:\n    - [high] review evidence missing for 4 task(s)\n    - [high] test evidence missing for 4 task(s)\n\n## Phase 9: Critical Architecture - Error Boundaries\n  Tasks: 0/3 completed (0.0%)\n  Evidence: 0/3 complete\n  Blockers:\n    - [high] review evidence missing for 3 task(s)\n    - [high] test evidence missing for 3 task(s)\n\n## Phase 10: Critical Performance Fixes\n  Tasks: 0/3 completed (0.0%)\n  Evidence: 0/3 complete\n  Blockers:\n    - [high] review evidence missing for 3 task(s)\n    - [high] test evidence missing for 3 task(s)\n\n## Phase 11: Critical Documentation Fixes\n  Tasks: 0/1 completed (0.0%)\n  Evidence: 0/1 complete\n  Blockers:\n    - [high] review evidence missing for 1 task(s)\n    - [high] test evidence missing for 1 task(s)\n\n## Phase 12: Major Fixes - Provider Enum\n  Tasks: 0/1 completed (0.0%)\n  Evidence: 0/1 complete\n  Blockers:\n    - [high] review evidence missing for 1 task(s)\n    - [high] test evidence missing for 1 task(s)\n\n## Phase 13: Major Fixes - Security\n  Tasks: 0/4 completed (0.0%)\n  Evidence: 0/4 complete\n  Blockers:\n    - [high] review evidence missing for 4 task(s)\n    - [high] test evidence missing for 4 task(s)\n\n## Phase 14: Major Fixes - Cross-Platform\n  Tasks: 0/3 completed (0.0%)\n  Evidence: 0/3 complete\n  Blockers:\n    - [high] review evidence missing for 3 task(s)\n    - [high] test evidence missing for 3 task(s)\n\n## Overall Blockers\n- [high] review evidence missing for 1 task(s)\n- [high] test evidence missing for 1 task(s)\n- [high] review evidence missing for 7 task(s)\n- [high] test evidence missing for 7 task(s)\n- [high] review evidence missing for 3 task(s)\n- [high] test evidence missing for 3 task(s)\n- [high] review evidence missing for 1 task(s)\n- [high] test evidence missing for 1 task(s)\n- [high] review evidence missing for 5 task(s)\n- [high] test evidence missing for 5 task(s)\n- [high] Missing evidence: review, test\n- [high] Missing evidence: review, test\n- [high] review evidence missing for 6 task(s)\n- [high] test evidence missing for 6 task(s)\n- [high] review evidence missing for 3 task(s)\n- [high] test evidence missing for 3 task(s)\n- [high] review evidence missing for 4 task(s)\n- [high] test evidence missing for 4 task(s)\n- [high] review evidence missing for 3 task(s)\n- [high] test evidence missing for 3 task(s)\n- [high] review evidence missing for 3 task(s)\n- [high] test evidence missing for 3 task(s)\n- [high] review evidence missing for 1 task(s)\n- [high] test evidence missing for 1 task(s)\n- [high] review evidence missing for 1 task(s)\n- [high] test evidence missing for 1 task(s)\n- [high] review evidence missing for 4 task(s)\n- [high] test evidence missing for 4 task(s)\n- [high] review evidence missing for 3 task(s)\n- [high] test evidence missing for 3 task(s)"
+}

@@ -85,6 +85,7 @@ export interface UserConfig {
     is_eleven_labs_enabled: boolean;
     is_twilio_enabled: boolean;
     khoj_version: string;
+    is_admin: boolean;
     anonymous_mode: boolean;
     notion_oauth_url: string;
     detail: string;

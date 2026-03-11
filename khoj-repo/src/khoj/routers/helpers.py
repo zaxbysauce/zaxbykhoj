@@ -102,6 +102,8 @@ from khoj.processor.conversation.utils import (
 from khoj.routers.email import is_resend_enabled, send_task_email
 
 # Re-export auth-related functions for backward compatibility
+from khoj.routers.auth_helpers import configure_content, get_user_config
+
 # Re-export search-related functions for backward compatibility
 from khoj.routers.search_helpers import (
     execute_search,

@@ -113,9 +113,18 @@ class UserAuthenticationBackend(AuthenticationBackend):
                 username="default",
                 email="default@example.com",
                 password="default",
+                is_staff=True,
+                is_superuser=True,
             )
             renewal_date = make_aware(datetime.strptime("2100-04-01", "%Y-%m-%d"))
             Subscription.objects.create(user=default_user, type=Subscription.Type.STANDARD, renewal_date=renewal_date)
+        else:
+            # Ensure default user has admin privileges for LDAP settings
+            default_user = self.khojuser_manager.filter(username="default").first()
+            if default_user:
+                default_user.is_staff = True
+                default_user.is_superuser = True
+                default_user.save()
 
     async def authenticate(self, request: HTTPConnection):
         # Skip authentication for error pages to avoid infinite recursion

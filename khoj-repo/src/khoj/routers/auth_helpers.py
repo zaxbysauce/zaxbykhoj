@@ -59,6 +59,7 @@ def get_user_config(user: KhojUser, request: Request, is_detailed: bool = False)
             "is_active": is_active,
             "has_documents": has_documents,
             "khoj_version": state.khoj_version,
+            "is_admin": user.is_staff or user.is_superuser if user else False,
         }
 
     user_subscription_state = get_user_subscription_state(user.email)
