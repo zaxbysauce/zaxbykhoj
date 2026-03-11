@@ -147,7 +147,7 @@ def get_user_config(user: KhojUser, request: Request, is_detailed: bool = False)
         "username": user.username if user else None,
         "user_photo": user_picture,
         "is_active": is_active,
-        "is_admin": user.is_staff or user.is_superuser,
+        "is_admin": user.is_staff or user.is_superuser if user else False,
         "given_name": given_name,
         "phone_number": str(user.phone_number) if user.phone_number else "",
         "is_phone_number_verified": user.verified_phone_number,
