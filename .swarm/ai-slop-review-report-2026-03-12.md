@@ -361,6 +361,8 @@ Route behavior:
 **Total Findings:** 12
 **Files Clean:** 392 / 402
 
+_Clean-file count reflects repository-wide discovery and heuristic screening with no escalated findings recorded for those files; it is not a claim that all 392 files received the same manual depth of review as the files listed above._
+
 ---
 
 ## Recommended Actions (Priority Order)
