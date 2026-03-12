@@ -18,6 +18,8 @@ const ldapConfigSchema = z.object({
   tls_verify: z.boolean().default(true),
   tls_ca_bundle_path: z.string().optional(),
   enabled: z.boolean().default(false),
+  bind_dn: z.string().optional(),
+  bind_password: z.string().optional(),
 });
 
 type LdapConfigForm = z.infer<typeof ldapConfigSchema>;
@@ -26,12 +28,26 @@ interface LdapConfigProps {
   isAdmin: boolean;
 }
 
+interface LdapManagedUser {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  ldap_dn: string;
+  is_active: boolean;
+  is_admin: boolean;
+}
+
 export default function LdapConfig({ isAdmin }: LdapConfigProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saveResult, setSaveResult] = useState<{ success: boolean; message: string } | null>(null);
   const [initialData, setInitialData] = useState<LdapConfigForm | null>(null);
+  const [ldapUsers, setLdapUsers] = useState<LdapManagedUser[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [userActionResult, setUserActionResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const {
     register,
@@ -49,6 +65,8 @@ export default function LdapConfig({ isAdmin }: LdapConfigProps) {
       tls_verify: true,
       tls_ca_bundle_path: '',
       enabled: false,
+      bind_dn: '',
+      bind_password: '',
     },
   });
 
@@ -58,6 +76,7 @@ export default function LdapConfig({ isAdmin }: LdapConfigProps) {
   useEffect(() => {
     if (isAdmin) {
       fetchConfig();
+      fetchLdapUsers();
     }
   }, [isAdmin]);
 
@@ -66,12 +85,63 @@ export default function LdapConfig({ isAdmin }: LdapConfigProps) {
       const response = await fetch('/api/settings/ldap');
       if (response.ok) {
         const data = await response.json();
-        setInitialData(data);
-        reset(data);
+        const hydrated = { ...data, bind_password: '' };
+        setInitialData(hydrated);
+        reset(hydrated);
       }
     } catch (error) {
       console.error('Failed to fetch LDAP config:', error);
     }
+  };
+
+
+  const fetchLdapUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const response = await fetch('/api/settings/ldap/users');
+      if (response.ok) {
+        const users = await response.json();
+        setLdapUsers(users);
+      }
+    } catch (error) {
+      console.error('Failed to fetch LDAP users:', error);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const updateLdapUser = async (userId: number, payload: { is_admin?: boolean; is_active?: boolean }) => {
+    setUserActionResult(null);
+    try {
+      const response = await fetch(`/api/settings/ldap/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        setUserActionResult({ success: false, message: error.detail || 'Failed to update LDAP user.' });
+        return;
+      }
+
+      const updatedUser = await response.json();
+      setLdapUsers((previous) => previous.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
+      setUserActionResult({ success: true, message: `Updated LDAP user: ${updatedUser.username}` });
+    } catch (error) {
+      setUserActionResult({ success: false, message: 'Network error updating LDAP user.' });
+    }
+  };
+
+  const withCredentialPayload = (data: LdapConfigForm) => {
+    const password = (data.bind_password || "").trim();
+    const bindDn = (data.bind_dn || "").trim();
+
+    if (!password) {
+      return { ...data, bind_dn: undefined, bind_password: undefined };
+    }
+
+    return { ...data, bind_dn: bindDn, bind_password: password };
   };
 
   const testConnection = async (data: LdapConfigForm) => {
@@ -82,7 +152,7 @@ export default function LdapConfig({ isAdmin }: LdapConfigProps) {
       const response = await fetch('/api/settings/ldap/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(withCredentialPayload(data)),
       });
 
       const result = await response.json();
@@ -105,7 +175,7 @@ export default function LdapConfig({ isAdmin }: LdapConfigProps) {
       const response = await fetch('/api/settings/ldap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(withCredentialPayload(data)),
       });
 
       if (response.ok) {
@@ -113,8 +183,9 @@ export default function LdapConfig({ isAdmin }: LdapConfigProps) {
           success: true,
           message: 'LDAP configuration saved successfully.',
         });
-        // Refresh config to get server-side state
+        // Refresh config and LDAP users to get server-side state
         fetchConfig();
+        fetchLdapUsers();
       } else {
         const error = await response.json();
         setSaveResult({
@@ -266,6 +337,52 @@ export default function LdapConfig({ isAdmin }: LdapConfigProps) {
           )}
         </div>
 
+
+        <div className={styles.section}>
+          <h3>Bind Account Credentials (Required for AD)</h3>
+
+          <div className={styles.field}>
+            <label htmlFor="bind_dn">
+              Bind Username / DN
+              <span className={styles.required}>*</span>
+            </label>
+            <input
+              id="bind_dn"
+              type="text"
+              {...register('bind_dn')}
+              placeholder="CN=svc-khoj,OU=Service Accounts,DC=company,DC=com"
+              aria-invalid={errors.bind_dn ? 'true' : 'false'}
+            />
+            {errors.bind_dn && (
+              <span className={styles.error} role="alert">{errors.bind_dn.message}</span>
+            )}
+            <p className={styles.help}>
+              Service account used to search users in LDAP/Active Directory.
+            </p>
+          </div>
+
+          <div className={styles.field}>
+            <label htmlFor="bind_password">
+              Bind Password
+              <span className={styles.required}>*</span>
+            </label>
+            <input
+              id="bind_password"
+              type="password"
+              {...register('bind_password')}
+              placeholder="Enter service account password"
+              autoComplete="new-password"
+              aria-invalid={errors.bind_password ? 'true' : 'false'}
+            />
+            {errors.bind_password && (
+              <span className={styles.error} role="alert">{errors.bind_password.message}</span>
+            )}
+            <p className={styles.help}>
+              Password is never returned by the API. Leave blank to keep existing runtime credential.
+            </p>
+          </div>
+        </div>
+
         <div className={styles.section}>
           <h3>Enable Authentication</h3>
           
@@ -282,6 +399,66 @@ export default function LdapConfig({ isAdmin }: LdapConfigProps) {
             </p>
           </div>
         </div>
+
+
+        <div className={styles.section}>
+          <h3>LDAP User Management</h3>
+          <p className={styles.help}>
+            Manage LDAP-provisioned accounts after users sign in. Promote users to admin or disable accounts.
+          </p>
+
+          {isLoadingUsers ? (
+            <p className={styles.help}>Loading LDAP users...</p>
+          ) : ldapUsers.length === 0 ? (
+            <p className={styles.help}>No LDAP users found yet. Users appear here after their first successful LDAP login.</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>Username</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>Email</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>Status</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>Admin</th>
+                    <th style={{ textAlign: 'left', padding: '8px' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ldapUsers.map((ldapUser) => (
+                    <tr key={ldapUser.id}>
+                      <td style={{ padding: '8px' }}>{ldapUser.username}</td>
+                      <td style={{ padding: '8px' }}>{ldapUser.email || '-'}</td>
+                      <td style={{ padding: '8px' }}>{ldapUser.is_active ? 'Active' : 'Disabled'}</td>
+                      <td style={{ padding: '8px' }}>{ldapUser.is_admin ? 'Yes' : 'No'}</td>
+                      <td style={{ padding: '8px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className={styles.testButton}
+                          onClick={() => updateLdapUser(ldapUser.id, { is_admin: !ldapUser.is_admin })}
+                        >
+                          {ldapUser.is_admin ? 'Remove Admin' : 'Make Admin'}
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.saveButton}
+                          onClick={() => updateLdapUser(ldapUser.id, { is_active: !ldapUser.is_active })}
+                        >
+                          {ldapUser.is_active ? 'Disable User' : 'Enable User'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {userActionResult && (
+          <div className={`${styles.alert} ${userActionResult.success ? styles.success : styles.error}`}>
+            {userActionResult.message}
+          </div>
+        )}
 
         {testResult && (
           <div className={`${styles.alert} ${testResult.success ? styles.success : styles.error}`}>

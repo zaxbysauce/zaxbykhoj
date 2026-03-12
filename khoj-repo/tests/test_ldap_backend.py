@@ -254,6 +254,36 @@ class TestTwoBindAuthentication:
             # Should return None for invalid credentials
             assert result is None
 
+    @patch('khoj.processor.auth.ldap_backend.Server')
+    @patch('khoj.processor.auth.ldap_backend.Tls')
+    def test_empty_password_is_rejected_before_bind(self, mock_tls, mock_server):
+        """Test empty passwords are rejected before LDAP bind attempts."""
+        config = MockLdapConfig()
+        backend = LdapAuthBackend(config)
+
+        with patch('khoj.processor.auth.ldap_backend.Connection') as mock_connection:
+            result = backend.authenticate("testuser", "")
+
+            assert result is None
+            mock_connection.assert_not_called()
+
+    @patch('khoj.processor.auth.ldap_backend.Server')
+    @patch('khoj.processor.auth.ldap_backend.Tls')
+    def test_extract_ldap_attr_handles_wrapped_values(self, mock_tls, mock_server):
+        """Test LDAP attribute extraction handles ldap3 wrappers and lists."""
+        config = MockLdapConfig()
+        backend = LdapAuthBackend(config)
+
+        class WrappedValue:
+            def __init__(self, value):
+                self.value = value
+
+        entry = MagicMock()
+        entry.mail = WrappedValue(["user@example.com"])
+
+        assert backend._extract_ldap_attr(entry, "mail") == "user@example.com"
+
+
 
 class TestUserProvisioning:
     """Test suite for user provisioning from LDAP."""

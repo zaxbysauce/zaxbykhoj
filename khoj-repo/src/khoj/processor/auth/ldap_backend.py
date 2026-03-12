@@ -186,15 +186,18 @@ class LdapAuthBackend:
         Raises:
             LdapAuthError: If LDAP server is unreachable or misconfigured
         """
-        import hashlib
         from django.db import transaction
-        from khoj.database.models import KhojUser, LdapConfig
-        
+
         # Sanitize username
         try:
             sanitized_username = self._sanitize_username(username)
         except ValueError as e:
             self._log_auth_attempt(username, "failed", "invalid_username")
+            return None
+
+        # Reject empty passwords early to avoid anonymous/invalid bind attempts
+        if not password:
+            self._log_auth_attempt(username, "failed", "invalid_credentials")
             return None
         
         # Get service account credentials
@@ -252,13 +255,14 @@ class LdapAuthBackend:
                 return None
             
             # Extract user attributes
+            ldap_username = self._extract_ldap_attr(user_entry, 'sAMAccountName') or username
             user_attrs = {
                 'dn': user_dn,
-                'username': username,
-                'email': getattr(user_entry, 'mail', None),
-                'first_name': getattr(user_entry, 'givenName', None),
-                'last_name': getattr(user_entry, 'sn', None),
-                'full_name': getattr(user_entry, 'cn', None),
+                'username': ldap_username,
+                'email': self._extract_ldap_attr(user_entry, 'mail'),
+                'first_name': self._extract_ldap_attr(user_entry, 'givenName'),
+                'last_name': self._extract_ldap_attr(user_entry, 'sn'),
+                'full_name': self._extract_ldap_attr(user_entry, 'cn'),
             }
             
             # Step 3: Provision or update local user
@@ -270,7 +274,7 @@ class LdapAuthBackend:
             
             return user_attrs
             
-        except LDAPException as e:
+        except LDAPException:
             logger.exception("LDAP error during authentication")
             self._log_auth_attempt(username, "failed", "ldap_error")
             raise LdapAuthError("LDAP authentication failed")
@@ -325,6 +329,25 @@ class LdapAuthBackend:
         
         logger.info(f"Created new KhojUser from LDAP: {username}")
         return user
+
+    def _extract_ldap_attr(self, entry, attr_name: str) -> Optional[str]:
+        """Extract and normalize LDAP attribute value from ldap3 entry.
+
+        Handles ldap3 EntryAttribute wrappers and list-valued attributes,
+        returning a trimmed string or None.
+        """
+        raw_value = getattr(entry, attr_name, None)
+        if raw_value is None:
+            return None
+
+        value = getattr(raw_value, "value", raw_value)
+        if isinstance(value, list):
+            value = value[0] if value else None
+        if value is None:
+            return None
+
+        normalized = str(value).strip()
+        return normalized or None
     
     def _update_user_from_ldap(self, user: 'KhojUser', ldap_attrs: dict) -> None:
         """Update local user attributes from LDAP.

@@ -6,6 +6,10 @@ from enum import Enum
 from typing import List
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    return os.getenv(name, str(default)).lower() == "true"
+
+
 class SearchType(str, Enum):
     All = "all"
     Org = "org"
@@ -148,27 +152,27 @@ class RagConfig:
     """
 
     # Feature Flags
-    crag_enabled: bool = True
+    crag_enabled: bool = _env_bool("KHOJ_CRAG_ENABLED", True)
     """Enable Corrective RAG (CRAG) evaluation to assess retrieval quality
     and trigger corrective actions when needed."""
 
-    query_transform_enabled: bool = True
+    query_transform_enabled: bool = _env_bool("KHOJ_QUERY_TRANSFORM_ENABLED", True)
     """Enable query transformation to rewrite and expand user queries for
     better retrieval performance."""
 
-    hybrid_search_enabled: bool = True
+    hybrid_search_enabled: bool = _env_bool("KHOJ_HYBRID_SEARCH_ENABLED", True)
     """Enable hybrid search combining dense and sparse retrieval methods
     for improved search results."""
 
-    contextual_chunking_enabled: bool = False
+    contextual_chunking_enabled: bool = _env_bool("KHOJ_CONTEXTUAL_CHUNKING_ENABLED", False)
     """Enable contextual chunking to add document-level context to each chunk,
     improving retrieval accuracy at the cost of increased storage."""
 
-    multi_scale_chunking_enabled: bool = False
+    multi_scale_chunking_enabled: bool = _env_bool("KHOJ_MULTI_SCALE_CHUNKING_ENABLED", False)
     """Enable multi-scale chunking to create chunks of varying sizes,
     allowing retrieval at different granularity levels."""
 
-    tri_vector_search_enabled: bool = False
+    tri_vector_search_enabled: bool = _env_bool("KHOJ_TRI_VECTOR_SEARCH_ENABLED", False)
     """Enable tri-vector search mode using query, document, and chunk-level
     embeddings for enhanced retrieval precision."""
 

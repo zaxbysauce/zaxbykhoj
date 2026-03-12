@@ -18,6 +18,7 @@ get_ldap_bind_dn = secrets_module.get_ldap_bind_dn
 get_ldap_bind_password = secrets_module.get_ldap_bind_password
 get_ldap_credentials = secrets_module.get_ldap_credentials
 has_ldap_credentials = secrets_module.has_ldap_credentials
+set_ldap_credentials = secrets_module.set_ldap_credentials
 
 
 class TestModuleImport(unittest.TestCase):
@@ -30,6 +31,7 @@ class TestModuleImport(unittest.TestCase):
         self.assertTrue(hasattr(secrets_module, 'get_ldap_bind_password'))
         self.assertTrue(hasattr(secrets_module, 'get_ldap_credentials'))
         self.assertTrue(hasattr(secrets_module, 'has_ldap_credentials'))
+        self.assertTrue(hasattr(secrets_module, 'set_ldap_credentials'))
 
 
 class TestGetLdapBindDn(unittest.TestCase):
@@ -176,6 +178,27 @@ class TestHasLdapCredentials(unittest.TestCase):
         """Test that False is returned when both credentials are empty strings."""
         result = has_ldap_credentials()
         self.assertFalse(result)
+
+
+
+class TestSetLdapCredentials(unittest.TestCase):
+    """Test set_ldap_credentials function."""
+
+    @patch.dict(os.environ, {}, clear=True)
+    def test_sets_credentials_in_environment(self):
+        set_ldap_credentials("CN=svc,DC=example,DC=com", "secret")
+        self.assertEqual(os.environ.get("KHOJ_LDAP_BIND_DN"), "CN=svc,DC=example,DC=com")
+        self.assertEqual(os.environ.get("KHOJ_LDAP_BIND_PASSWORD"), "secret")
+
+    @patch.dict(os.environ, {}, clear=True)
+    def test_rejects_empty_dn(self):
+        with self.assertRaises(LdapSecretError):
+            set_ldap_credentials("", "secret")
+
+    @patch.dict(os.environ, {}, clear=True)
+    def test_rejects_empty_password(self):
+        with self.assertRaises(LdapSecretError):
+            set_ldap_credentials("CN=svc,DC=example,DC=com", "")
 
 
 if __name__ == '__main__':
