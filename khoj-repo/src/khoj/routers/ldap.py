@@ -213,18 +213,22 @@ async def update_ldap_config(config_request: LdapConfigRequest, admin: KhojUser 
     if bind_dn:
         defaults["bind_dn"] = bind_dn
 
-    config, created = await LdapConfig.objects.aupdate_or_create(defaults=defaults)
-
-    # Encrypt and persist the bind password when provided
+    # Determine whether credentials will be available after this save
     bind_password = (config_request.bind_password or "").strip()
-    if bind_password:
-        await sync_to_async(config.set_bind_password)(bind_password)
-        await config.asave(update_fields=["bind_password_enc"])
+    # For the enabled check, we look at what credentials will exist:
+    # - new credentials from the request (bind_dn + bind_password), OR
+    # - existing DB credentials (if we're not clearing them), OR
+    # - env vars / Vault
+    new_db_creds = bool(bind_dn and bind_password)
+    will_have_creds = new_db_creds or is_vault_configured() or has_ldap_credentials()
 
-    # Check whether credentials exist — from DB or env vars
-    has_creds = _config_has_credentials(config) or is_vault_configured() or has_ldap_credentials()
+    if not will_have_creds:
+        # Check if existing DB record already has credentials
+        existing = await LdapConfig.objects.filter().afirst()
+        if existing and _config_has_credentials(existing):
+            will_have_creds = True
 
-    if config_request.enabled and not has_creds:
+    if config_request.enabled and not will_have_creds:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
@@ -232,6 +236,13 @@ async def update_ldap_config(config_request: LdapConfigRequest, admin: KhojUser 
                 "set KHOJ_LDAP_BIND_DN and KHOJ_LDAP_BIND_PASSWORD environment variables, or configure Vault."
             ),
         )
+
+    config, created = await LdapConfig.objects.aupdate_or_create(defaults=defaults)
+
+    # Encrypt and persist the bind password when provided
+    if bind_password:
+        await sync_to_async(config.set_bind_password)(bind_password)
+        await config.asave(update_fields=["bind_password_enc"])
 
     logger.info(f"LDAP configuration {'created' if created else 'updated'} by {admin.username}")
 
