@@ -339,6 +339,8 @@ class TestUserProvisioning:
         mock_existing_user.username = 'existinguser'
         mock_existing_user.ldap_dn = 'CN=Existing User,OU=Users,DC=example,DC=com'
 
+        # Reset side_effect from any previous test before setting return_value
+        mock_khoj_user_class.objects.get.side_effect = None
         mock_khoj_user_class.objects.get.return_value = mock_existing_user
 
         result = backend._get_or_create_user(ldap_attrs)
@@ -678,6 +680,67 @@ class TestErrorHandling:
                 assert "configuration" in str(e).lower() or "ldap" in str(e).lower()
 
 
+class TestDbBindCredentials:
+    """Test _get_bind_credentials prefers DB-stored credentials over env vars."""
+
+    @patch('khoj.processor.auth.ldap_backend.Server')
+    @patch('khoj.processor.auth.ldap_backend.Tls')
+    def test_db_credentials_used_when_present(self, mock_tls, mock_server):
+        """DB bind_dn / bind_password_enc takes priority over env vars."""
+        config = MockLdapConfig()
+        # Simulate a config that has DB-stored credentials
+        config.bind_dn = "CN=svc-khoj,DC=corp,DC=com"
+        config.has_bind_password = lambda: True
+        config.get_bind_password = lambda: "s3cret!"
+
+        backend = LdapAuthBackend(config)
+        mock_secrets_vault.is_vault_configured.return_value = False
+
+        dn, pw = backend._get_bind_credentials()
+
+        assert dn == "CN=svc-khoj,DC=corp,DC=com"
+        assert pw == "s3cret!"
+
+    @patch('khoj.processor.auth.ldap_backend.Server')
+    @patch('khoj.processor.auth.ldap_backend.Tls')
+    def test_env_vars_used_when_no_db_credentials(self, mock_tls, mock_server):
+        """Falls back to env-var secrets when no DB credentials are present."""
+        config = MockLdapConfig()
+        # No bind_dn on config → falls through to env vars
+        mock_secrets_vault.is_vault_configured.return_value = False
+        mock_secrets.get_ldap_bind_dn.return_value = "CN=env-svc,DC=corp,DC=com"
+        mock_secrets.get_ldap_bind_password.return_value = "env_password"
+
+        backend = LdapAuthBackend(config)
+
+        dn, pw = backend._get_bind_credentials()
+
+        assert dn == "CN=env-svc,DC=corp,DC=com"
+        assert pw == "env_password"
+
+    @patch('khoj.processor.auth.ldap_backend.Server')
+    @patch('khoj.processor.auth.ldap_backend.Tls')
+    def test_vault_takes_priority_over_db(self, mock_tls, mock_server):
+        """Vault credentials take priority over DB-stored credentials."""
+        config = MockLdapConfig()
+        config.bind_dn = "CN=db-svc,DC=corp,DC=com"
+        config.has_bind_password = lambda: True
+        config.get_bind_password = lambda: "db_password"
+
+        mock_secrets_vault.is_vault_configured.return_value = True
+        mock_secrets_vault.get_ldap_credentials_from_vault.return_value = (
+            "CN=vault-svc,DC=corp,DC=com", "vault_password"
+        )
+
+        backend = LdapAuthBackend(config)
+        dn, pw = backend._get_bind_credentials()
+
+        assert dn == "CN=vault-svc,DC=corp,DC=com"
+        assert pw == "vault_password"
+        # Restore vault mock for other tests
+        mock_secrets_vault.is_vault_configured.return_value = False
+
+
 if __name__ == '__main__':
     # Run tests manually if pytest is not available
     import traceback
@@ -688,6 +751,7 @@ if __name__ == '__main__':
         TestUserSync,
         TestAuditLogging,
         TestErrorHandling,
+        TestDbBindCredentials,
     ]
 
     passed = 0

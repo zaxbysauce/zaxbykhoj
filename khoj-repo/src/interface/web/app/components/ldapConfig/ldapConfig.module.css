@@ -92,6 +92,7 @@
   font-style: italic;
 }
 
+/* Inline field-validation error text */
 .error {
   color: var(--destructive);
   font-size: 0.875rem;
@@ -190,6 +191,69 @@
   color: var(--muted-foreground);
 }
 
+/* Alert banners for test/save results */
+.alert {
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.success {
+  background: var(--success, #d1fae5);
+  color: var(--success-foreground, #065f46);
+  border: 1px solid var(--success-border, #6ee7b7);
+}
+
+/* When .error is used as an alert banner (combined with .alert) */
+.alert.error {
+  background: var(--destructive-muted, #fee2e2);
+  color: var(--destructive, #b91c1c);
+  border: 1px solid var(--destructive-border, #fca5a5);
+}
+
+/* Action buttons */
+.testButton {
+  padding: 0.6rem 1.25rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  transition: opacity 0.2s;
+}
+
+.testButton:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.testButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.saveButton {
+  padding: 0.6rem 1.25rem;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  transition: opacity 0.2s;
+}
+
+.saveButton:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @media (max-width: 640px) {
   .container {
     padding: 1rem;
@@ -199,7 +263,9 @@
     flex-direction: column;
   }
   
-  .button {
+  .button,
+  .testButton,
+  .saveButton {
     width: 100%;
   }
 }

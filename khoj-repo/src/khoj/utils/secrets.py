@@ -1,8 +1,11 @@
 """Secret management for LDAP and other sensitive configuration.
 
-Credentials are retrieved from environment variables only.
-NO passwords are stored in the database.
+Credentials can be stored in the database (Fernet-encrypted) or supplied via
+environment variables.  Database-stored credentials take priority over env vars
+so that settings configured through the admin UI persist across restarts.
 """
+import base64
+import hashlib
 import os
 import logging
 
@@ -12,6 +15,34 @@ logger = logging.getLogger(__name__)
 class LdapSecretError(Exception):
     """Raised when LDAP secrets cannot be retrieved."""
     pass
+
+
+def _fernet_key() -> bytes:
+    """Derive a URL-safe base64-encoded 32-byte key from Django's SECRET_KEY."""
+    from django.conf import settings
+    raw = settings.SECRET_KEY.encode()
+    return base64.urlsafe_b64encode(hashlib.sha256(raw).digest())
+
+
+def encrypt_ldap_password(plaintext: str) -> str:
+    """Encrypt *plaintext* with Fernet and return the token as a string."""
+    from cryptography.fernet import Fernet
+    f = Fernet(_fernet_key())
+    return f.encrypt(plaintext.encode()).decode()
+
+
+def decrypt_ldap_password(token: str) -> str:
+    """Decrypt a Fernet token produced by :func:`encrypt_ldap_password`."""
+    from cryptography.fernet import Fernet, InvalidToken
+    if not token:
+        raise LdapSecretError("No encrypted LDAP bind password stored in database.")
+    try:
+        f = Fernet(_fernet_key())
+        return f.decrypt(token.encode()).decode()
+    except InvalidToken:
+        raise LdapSecretError(
+            "Failed to decrypt LDAP bind password — SECRET_KEY may have changed."
+        )
 
 
 def get_ldap_bind_dn() -> str:

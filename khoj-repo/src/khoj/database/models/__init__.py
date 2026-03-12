@@ -178,9 +178,8 @@ class KhojUser(AbstractUser):
 class LdapConfig(DbBaseModel):
     """LDAP server configuration for external authentication.
 
-    SECURITY NOTE: This model stores ONLY non-sensitive configuration.
-    Credentials (bind_password) are NEVER stored here.
-    Use secrets.py or secrets_vault.py for credential retrieval.
+    SECURITY NOTE: bind_password is stored AES-encrypted using the Django
+    SECRET_KEY-derived Fernet key.  It is NEVER stored or returned in plaintext.
     """
 
     server_url = models.CharField(
@@ -215,6 +214,20 @@ class LdapConfig(DbBaseModel):
         default=False,
         help_text="Enable LDAP authentication"
     )
+    bind_dn = models.CharField(
+        max_length=500,
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Service account DN used to bind and search LDAP (e.g., CN=svc-khoj,DC=corp,DC=com)"
+    )
+    # Fernet-encrypted bind password — never stored or returned in plaintext.
+    bind_password_enc = models.TextField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text="Fernet-encrypted LDAP service account password"
+    )
 
     class Meta:
         verbose_name = "LDAP Configuration"
@@ -222,6 +235,20 @@ class LdapConfig(DbBaseModel):
 
     def __str__(self):
         return f"LDAP: {self.server_url}"
+
+    def set_bind_password(self, plaintext_password: str) -> None:
+        """Encrypt and store the bind password."""
+        from khoj.utils.secrets import encrypt_ldap_password
+        self.bind_password_enc = encrypt_ldap_password(plaintext_password)
+
+    def get_bind_password(self) -> str:
+        """Decrypt and return the bind password."""
+        from khoj.utils.secrets import decrypt_ldap_password
+        return decrypt_ldap_password(self.bind_password_enc)
+
+    def has_bind_password(self) -> bool:
+        """Return True if an encrypted bind password is stored."""
+        return bool(self.bind_password_enc)
 
 
 class GoogleUser(models.Model):

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, validator
 
 from khoj.database.models import KhojUser, LdapConfig
 from khoj.processor.auth import LdapAuthBackend, LdapAuthError
-from khoj.utils.secrets import LdapSecretError, get_ldap_bind_dn, has_ldap_credentials, set_ldap_credentials
+from khoj.utils.secrets import LdapSecretError, has_ldap_credentials
 from khoj.utils.secrets_vault import is_vault_configured
 
 logger = logging.getLogger(__name__)
@@ -150,7 +150,7 @@ def require_admin(user: KhojUser = Depends(get_current_user)) -> KhojUser:
 
 
 def _maybe_update_bind_credentials(bind_dn: Optional[str], bind_password: Optional[str]) -> bool:
-    """Update runtime LDAP bind credentials if explicitly provided."""
+    """Validate that bind credential inputs are consistent (both or neither)."""
     dn_provided = bind_dn is not None and bind_dn.strip() != ""
     pw_provided = bind_password is not None and bind_password.strip() != ""
 
@@ -163,12 +163,12 @@ def _maybe_update_bind_credentials(bind_dn: Optional[str], bind_password: Option
             detail="Both bind_dn and bind_password are required when updating LDAP credentials.",
         )
 
-    try:
-        set_ldap_credentials(bind_dn, bind_password)
-    except LdapSecretError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
     return True
+
+
+def _config_has_credentials(config: LdapConfig) -> bool:
+    """Return True if the config has a bind_dn and an encrypted password."""
+    return bool(config.bind_dn and config.has_bind_password())
 
 
 @router.get("/api/settings/ldap", response_model=LdapConfigResponse)
@@ -179,7 +179,6 @@ async def get_ldap_config(admin: KhojUser = Depends(require_admin)):
     if not config:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="LDAP configuration not found")
 
-    bind_dn = get_ldap_bind_dn() if has_ldap_credentials() else None
     return LdapConfigResponse(
         server_url=config.server_url,
         user_search_base=config.user_search_base,
@@ -188,8 +187,8 @@ async def get_ldap_config(admin: KhojUser = Depends(require_admin)):
         tls_verify=config.tls_verify,
         tls_ca_bundle_path=config.tls_ca_bundle_path,
         enabled=config.enabled,
-        bind_dn=bind_dn,
-        has_bind_password=has_ldap_credentials(),
+        bind_dn=config.bind_dn or None,
+        has_bind_password=_config_has_credentials(config),
     )
 
 
@@ -198,31 +197,44 @@ async def update_ldap_config(config_request: LdapConfigRequest, admin: KhojUser 
     """Update LDAP configuration (admin only)."""
     _maybe_update_bind_credentials(config_request.bind_dn, config_request.bind_password)
 
-    if config_request.enabled:
-        if not is_vault_configured() and not has_ldap_credentials():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "LDAP credentials not configured. Provide bind_dn and bind_password in settings, "
-                    "set KHOJ_LDAP_BIND_DN and KHOJ_LDAP_BIND_PASSWORD environment variables, or configure Vault."
-                ),
-            )
+    # Build update defaults (non-credential fields)
+    defaults = {
+        "server_url": config_request.server_url,
+        "user_search_base": config_request.user_search_base,
+        "user_search_filter": config_request.user_search_filter,
+        "use_tls": config_request.use_tls,
+        "tls_verify": config_request.tls_verify,
+        "tls_ca_bundle_path": config_request.tls_ca_bundle_path,
+        "enabled": config_request.enabled,
+    }
 
-    config, created = await LdapConfig.objects.aupdate_or_create(
-        defaults={
-            "server_url": config_request.server_url,
-            "user_search_base": config_request.user_search_base,
-            "user_search_filter": config_request.user_search_filter,
-            "use_tls": config_request.use_tls,
-            "tls_verify": config_request.tls_verify,
-            "tls_ca_bundle_path": config_request.tls_ca_bundle_path,
-            "enabled": config_request.enabled,
-        }
-    )
+    # Save bind_dn if provided
+    bind_dn = (config_request.bind_dn or "").strip() or None
+    if bind_dn:
+        defaults["bind_dn"] = bind_dn
+
+    config, created = await LdapConfig.objects.aupdate_or_create(defaults=defaults)
+
+    # Encrypt and persist the bind password when provided
+    bind_password = (config_request.bind_password or "").strip()
+    if bind_password:
+        await sync_to_async(config.set_bind_password)(bind_password)
+        await config.asave(update_fields=["bind_password_enc"])
+
+    # Check whether credentials exist — from DB or env vars
+    has_creds = _config_has_credentials(config) or is_vault_configured() or has_ldap_credentials()
+
+    if config_request.enabled and not has_creds:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "LDAP credentials not configured. Provide bind_dn and bind_password in settings, "
+                "set KHOJ_LDAP_BIND_DN and KHOJ_LDAP_BIND_PASSWORD environment variables, or configure Vault."
+            ),
+        )
 
     logger.info(f"LDAP configuration {'created' if created else 'updated'} by {admin.username}")
 
-    bind_dn = get_ldap_bind_dn() if has_ldap_credentials() else None
     return LdapConfigResponse(
         server_url=config.server_url,
         user_search_base=config.user_search_base,
@@ -231,8 +243,8 @@ async def update_ldap_config(config_request: LdapConfigRequest, admin: KhojUser 
         tls_verify=config.tls_verify,
         tls_ca_bundle_path=config.tls_ca_bundle_path,
         enabled=config.enabled,
-        bind_dn=bind_dn,
-        has_bind_password=has_ldap_credentials(),
+        bind_dn=config.bind_dn or None,
+        has_bind_password=_config_has_credentials(config),
     )
 
 
@@ -242,15 +254,7 @@ async def test_ldap_connection(test_request: LdapTestRequest, admin: KhojUser = 
     try:
         _maybe_update_bind_credentials(test_request.bind_dn, test_request.bind_password)
 
-        if not is_vault_configured() and not has_ldap_credentials():
-            return LdapTestResponse(
-                success=False,
-                message=(
-                    "LDAP credentials not configured. Provide bind_dn and bind_password in the form, "
-                    "set KHOJ_LDAP_BIND_DN and KHOJ_LDAP_BIND_PASSWORD environment variables, or configure Vault."
-                ),
-            )
-
+        # Build a temporary config to test against
         temp_config = LdapConfig(
             server_url=test_request.server_url,
             user_search_base=test_request.user_search_base,
@@ -261,8 +265,32 @@ async def test_ldap_connection(test_request: LdapTestRequest, admin: KhojUser = 
             enabled=True,
         )
 
-        backend = LdapAuthBackend(temp_config)
-        success, message = backend.test_connection()
+        # Attach in-form credentials to the temporary config if provided
+        bind_dn = (test_request.bind_dn or "").strip()
+        bind_password = (test_request.bind_password or "").strip()
+        if bind_dn:
+            temp_config.bind_dn = bind_dn
+        if bind_password:
+            temp_config.set_bind_password(bind_password)
+
+        # Fall back to DB-stored config for credentials when not supplied inline
+        if not _config_has_credentials(temp_config):
+            existing = await LdapConfig.objects.filter().afirst()
+            if existing and _config_has_credentials(existing):
+                temp_config.bind_dn = existing.bind_dn
+                temp_config.bind_password_enc = existing.bind_password_enc
+
+        if not _config_has_credentials(temp_config) and not is_vault_configured() and not has_ldap_credentials():
+            return LdapTestResponse(
+                success=False,
+                message=(
+                    "LDAP credentials not configured. Provide bind_dn and bind_password in the form, "
+                    "set KHOJ_LDAP_BIND_DN and KHOJ_LDAP_BIND_PASSWORD environment variables, or configure Vault."
+                ),
+            )
+
+        backend = await sync_to_async(LdapAuthBackend)(temp_config)
+        success, message = await sync_to_async(backend.test_connection)()
 
         return LdapTestResponse(success=success, message=message)
 
