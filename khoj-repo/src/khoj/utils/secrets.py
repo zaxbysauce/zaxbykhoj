@@ -65,6 +65,24 @@ def get_ldap_credentials() -> tuple[str, str]:
     return get_ldap_bind_dn(), get_ldap_bind_password()
 
 
+def set_ldap_credentials(bind_dn: str, bind_password: str) -> None:
+    """Set LDAP bind credentials in process environment.
+
+    This enables runtime updates from the admin settings page without logging
+    or persisting passwords in the database.
+    """
+    bind_dn = (bind_dn or "").strip()
+    bind_password = (bind_password or "").strip()
+
+    if not bind_dn:
+        raise LdapSecretError("LDAP bind DN cannot be empty")
+    if not bind_password:
+        raise LdapSecretError("LDAP bind password cannot be empty")
+
+    os.environ["KHOJ_LDAP_BIND_DN"] = bind_dn
+    os.environ["KHOJ_LDAP_BIND_PASSWORD"] = bind_password
+
+
 def has_ldap_credentials() -> bool:
     """Check if LDAP credentials are configured.
     

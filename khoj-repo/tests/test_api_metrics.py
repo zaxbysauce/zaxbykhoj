@@ -24,6 +24,7 @@ from starlette.authentication import AuthCredentials, AuthenticationBackend, Sim
 from starlette.middleware.authentication import AuthenticationMiddleware
 
 # Khoj imports
+from khoj.app import settings
 from khoj.routers.api_metrics import api_metrics
 from khoj.utils.config import RagConfig
 
@@ -261,17 +262,17 @@ class TestFeatureFlagsInResponse(TestCase):
         app = create_test_app(authenticated=True, user=mock_user)
         client = TestClient(app)
 
-        # Set specific RagConfig values for testing
-        original_crag = RagConfig.crag_enabled
-        original_query_transform = RagConfig.query_transform_enabled
+        # Set specific feature flag values for testing
+        original_crag = settings.CRAG_ENABLED
+        original_query_transform = settings.QUERY_TRANSFORM_ENABLED
         original_hybrid = RagConfig.hybrid_search_enabled
         original_contextual = RagConfig.contextual_chunking_enabled
         original_multi_scale = RagConfig.multi_scale_chunking_enabled
         original_tri_vector = RagConfig.tri_vector_search_enabled
 
         try:
-            RagConfig.crag_enabled = True
-            RagConfig.query_transform_enabled = False
+            settings.CRAG_ENABLED = True
+            settings.QUERY_TRANSFORM_ENABLED = False
             RagConfig.hybrid_search_enabled = True
             RagConfig.contextual_chunking_enabled = False
             RagConfig.multi_scale_chunking_enabled = True
@@ -318,7 +319,7 @@ class TestFeatureFlagsInResponse(TestCase):
             self.assertIn("multi_scale_chunking_enabled", feature_flags)
             self.assertIn("tri_vector_search_enabled", feature_flags)
 
-            # Verify values match RagConfig
+            # Verify values match runtime flags used by retrieval endpoints
             self.assertTrue(feature_flags["crag_enabled"])
             self.assertFalse(feature_flags["query_transform_enabled"])
             self.assertTrue(feature_flags["hybrid_search_enabled"])
@@ -328,8 +329,8 @@ class TestFeatureFlagsInResponse(TestCase):
 
         finally:
             # Restore original values
-            RagConfig.crag_enabled = original_crag
-            RagConfig.query_transform_enabled = original_query_transform
+            settings.CRAG_ENABLED = original_crag
+            settings.QUERY_TRANSFORM_ENABLED = original_query_transform
             RagConfig.hybrid_search_enabled = original_hybrid
             RagConfig.contextual_chunking_enabled = original_contextual
             RagConfig.multi_scale_chunking_enabled = original_multi_scale

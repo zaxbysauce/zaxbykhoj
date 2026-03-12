@@ -9,6 +9,7 @@ from fastapi.responses import Response
 from starlette.authentication import requires
 
 from khoj.database.models import Entry
+from khoj.app import settings
 from khoj.utils.config import RagConfig
 
 api_metrics = APIRouter()
@@ -59,8 +60,8 @@ async def get_rag_metrics(
 
     # Get feature flags from RagConfig
     feature_flags: Dict[str, bool] = {
-        "crag_enabled": RagConfig.crag_enabled,
-        "query_transform_enabled": RagConfig.query_transform_enabled,
+        "crag_enabled": settings.CRAG_ENABLED,
+        "query_transform_enabled": settings.QUERY_TRANSFORM_ENABLED,
         "hybrid_search_enabled": RagConfig.hybrid_search_enabled,
         "contextual_chunking_enabled": RagConfig.contextual_chunking_enabled,
         "multi_scale_chunking_enabled": RagConfig.multi_scale_chunking_enabled,
