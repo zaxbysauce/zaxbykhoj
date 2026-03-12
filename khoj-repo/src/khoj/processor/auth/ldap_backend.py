@@ -110,17 +110,30 @@ class LdapAuthBackend:
             )
     
     def _get_bind_credentials(self) -> Tuple[str, str]:
-        """Get LDAP bind credentials from secure storage.
-        
+        """Get LDAP bind credentials from the most available source.
+
+        Priority order:
+        1. HashiCorp Vault (if configured)
+        2. DB-stored credentials on the LdapConfig model (Fernet-encrypted)
+        3. Environment variables (KHOJ_LDAP_BIND_DN / KHOJ_LDAP_BIND_PASSWORD)
+
         Returns:
             tuple: (bind_dn, bind_password)
-            
+
         Security:
-            Credentials are retrieved from Vault or environment variables.
             Passwords are NEVER logged.
         """
         if is_vault_configured():
             return get_ldap_credentials_from_vault()
+
+        # Prefer DB-stored credentials so they survive restarts
+        bind_dn_db = getattr(self.config, "bind_dn", None)
+        if bind_dn_db and self.config.has_bind_password():
+            try:
+                return bind_dn_db, self.config.get_bind_password()
+            except Exception:
+                logger.warning("Failed to decrypt DB bind password, falling back to env vars")
+
         return get_ldap_bind_dn(), get_ldap_bind_password()
     
     def _sanitize_username(self, username: str) -> str:
